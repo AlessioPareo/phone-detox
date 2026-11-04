@@ -1,32 +1,50 @@
 #!/bin/sh
-# Elenca tutte le app del telefono con un verdetto. Non cambia niente.
+# Lists every app on the phone with a verdict. Changes nothing.
 #
-#   sh candidates.sh [telefono]
+#   sh candidates.sh [phone] [--tsv]
 #
-#   VERDETTO  STATO  PACCHETTO                          COS'È
+#   VERDICT  STATE  PACKAGE                            WHAT IT IS
 #
-#   mai     serve al telefono (avvio, chiamate, SMS, rete, sicurezza) o Android la tiene
-#           sempre accesa. Non toccarla.
-#   serve   porta una funzione che potresti usare. Via solo se non la usi.
-#   via     di solito si può disattivare: pubblicità, doppioni, app del produttore.
-#   dubbio  non so cos'è. Nel dubbio resta accesa.
-#   tua     installata da te: si disinstalla normalmente dalle Impostazioni.
+#   never    the phone needs it (boot, calls, SMS, network, security) or Android always
+#            keeps it on. Don't touch it.
+#   useful   provides a feature you might use. Off only if you don't use it.
+#   bloat    usually safe to turn off: ads, duplicates, manufacturer apps.
+#   unknown  unknown. When in doubt, it stays on.
+#   yours    you installed it: uninstall it normally from Settings.
 #
-# Stato: on, off (disattivata) o tolta (rimossa per l'utente, si rimette con undo.sh).
-# docs/pulizia.md spiega cosa fare con la lista.
+# State: on, off, or removed (removed for the user, undo.sh brings it back).
+# --tsv prints the raw table (verdict, state, package, Italian name, English name, Italian
+# reason, English reason), separated by tabs: for programs.
+# Messages in Italian or English: PD_LANG=it or en (default: from the system language).
 set -e
 . "$(dirname "$0")/lib.sh"
 
-connect "$1"
+TARGET=; TSV=
+for a in "$@"; do
+  case "$a" in
+    --tsv) TSV=1 ;;
+    -*) say "Opzione sconosciuta: $a" "Unknown option: $a" >&2; exit 2 ;;
+    *) TARGET=$a ;;
+  esac
+done
+connect "$TARGET"
 out=$(mktemp 2>/dev/null || mktemp -t phonedetox)
 trap 'rm -f "$out"' EXIT
 classify "$out"
-awk -F'\t' '{ printf "%-7s %-6s %-48s %s\n", $1, $2, $3, $4 }' "$out"
+if [ -n "$TSV" ]; then cat "$out"; exit 0; fi
+
+awk -F'\t' -v it="$([ "$PD_LANG" = it ] && echo 1)" '{
+  n = it ? $4 : $5; w = it ? $6 : $7
+  if (n == "") n = $4
+  if (w != "") n = (n == "" ? "(" w ")" : n " (" w ")")
+  printf "%-8s %-8s %-48s %s\n", $1, $2, $3, n }' "$out"
 
 count() { awk -F'\t' -v v="$1" '$1==v' "$out" | grep -c . || true; }
 echo
-echo "mai $(count mai) | serve $(count serve) | via $(count via) | dubbio $(count dubbio) | tua $(count tua)"
+echo "never $(count never) | useful $(count useful) | bloat $(count bloat) | unknown $(count unknown) | yours $(count yours)"
 echo
-echo "via = di solito si può disattivare. dubbio = sconosciuta: lasciala accesa se non sai cos'è."
-echo "Prima di disattivare leggi docs/pulizia.md, e vai a gruppi di 5-10 app alla volta:"
-echo "  sh disable.sh $1 <pacchetto> <pacchetto> ..."
+say "bloat = di solito si può spegnere. unknown = sconosciuta: lasciala accesa se non sai cos'è." \
+    "bloat = usually safe to turn off. unknown = leave it on unless you know what it is."
+say "Prima di disattivare leggi docs/pulizia.md, e vai a gruppi di 5-10 app alla volta:" \
+    "Before turning anything off read docs/cleanup.md, and go in groups of 5-10 apps:"
+say "  sh disable.sh $TARGET <pacchetto> <pacchetto> ..." "  sh disable.sh $TARGET <package> <package> ..."

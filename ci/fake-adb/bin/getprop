@@ -1,5 +1,5 @@
 #!/bin/sh
-# Senza argomenti stampa tutto, come il getprop vero: [chiave]: [valore]
+# Without arguments prints everything, like the real getprop: [key]: [value]
 if [ -z "$1" ]; then
   sed 's/^\([^=]*\)=\(.*\)$/[\1]: [\2]/' "$FAKE_PHONE/props" 2>/dev/null; exit 0
 fi

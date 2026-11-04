@@ -1,5 +1,5 @@
-"""Prova l'interfaccia grafica sul telefono simulato. La lancia ci/test.sh, che prepara
-FAKE_PHONE, LOG_DIR e l'adb finto nel PATH."""
+"""Tests the app on the simulated phone. Run by ci/test.sh, which sets up FAKE_PHONE, LOG_DIR
+and the fake adb in PATH."""
 
 import json
 import os
@@ -51,77 +51,81 @@ def is_off(p):
 
 with urllib.request.urlopen(BASE + "/", timeout=10) as r:
     html = r.read().decode()
-check("la pagina ha il token", ui.Handler.token in html and "__TOKEN__" not in html)
-check("senza token: vietato", call("env", token="sbagliato")[0] == 403)
-check("da un altro host: vietato", call("env", host="evil.example:80")[0] == 403)
+check("the page has the token", ui.Handler.token in html and "__TOKEN__" not in html)
+check("no token: forbidden", call("env", token="wrong")[0] == 403)
+check("from another host: forbidden", call("env", host="evil.example:80")[0] == 403)
 
 code, env = call("env")
-check("trova adb e sh", code == 200 and env["adb"] and env["sh"], env)
+check("finds adb and sh", code == 200 and env["adb"] and env["sh"], env)
 
 code, d = call("devices")
-check("vede il telefono finto", code == 200 and d["devices"][0]["serial"] == "FAKE123456"
+check("sees the fake phone", code == 200 and d["devices"][0]["serial"] == "FAKE123456"
       and d["devices"][0]["state"] == "device", d)
 S = {"serial": "FAKE123456"}
 
 code, kv = call("identify", S)
-check("identifica il modello", code == 200 and kv.get("MODEL") == "SM-A546B", kv)
+check("identifies the model", code == 200 and kv.get("MODEL") == "SM-A546B", kv)
 code, r = call("confirm", {**S, "name": "Galaxy A54 5G"})
-check("salva il nome confermato", code == 200 and call("identify", S)[1].get("CONFIDENCE") == "confermato", r)
+check("saves the confirmed name", code == 200 and call("identify", S)[1].get("CONFIDENCE") == "confirmed", r)
 
 code, info = call("info", S)
-# Il telefono finto legge /proc/meminfo del computer: su macOS non c'è.
-check("legge la memoria libera", code == 200 and (isinstance(info["ram_free"], int) or not Path("/proc/meminfo").exists()), info)
+# The fake phone reads the computer's /proc/meminfo: macOS doesn't have it.
+check("reads free memory", code == 200 and (isinstance(info["ram_free"], int) or not Path("/proc/meminfo").exists()), info)
+code, info_it = call("info", {**S, "lang": "it"})
+check("Italian output when asked, still parsed", code == 200 and "== Telefono" in info_it["output"]
+      and (isinstance(info_it["ram_free"], int) or not Path("/proc/meminfo").exists()), info_it)
 
 code, a = call("apps", S)
 apps = {x["package"]: x for x in a.get("apps", [])}
-check("elenca le app con il verdetto", code == 200 and apps["com.google.android.gms"]["verdict"] == "mai"
-      and apps["com.samsung.android.bixby.agent"]["verdict"] == "via", a)
-check("nomi in italiano e inglese", apps["com.facebook.appmanager"]["name"] ==
+check("lists apps with verdicts", code == 200 and apps["com.google.android.gms"]["verdict"] == "never"
+      and apps["com.samsung.android.bixby.agent"]["verdict"] == "bloat", a)
+check("names in Italian and English", apps["com.facebook.appmanager"]["name"] ==
       {"it": "Installer nascosto di Facebook", "en": "Hidden Facebook installer"}, apps["com.facebook.appmanager"])
-check("motivo separato e tradotto", apps["com.sec.android.app.launcher"]["reason"] ==
+check("reason in both languages", apps["com.sec.android.app.launcher"]["reason"] ==
       {"it": "app predefinita: HOME", "en": "default app: HOME"}, apps["com.sec.android.app.launcher"])
-check("componente del chip in inglese", apps["com.qualcomm.qti.telephonyservice"]["name"]["en"].startswith("Chip component"),
+check("chip component in English", apps["com.qualcomm.qti.telephonyservice"]["name"]["en"].startswith("Chip component"),
       apps["com.qualcomm.qti.telephonyservice"])
-check("senza nome: niente motivo finto", apps["com.vendor.mystery"]["reason"] is None, apps["com.vendor.mystery"])
-names_it = set(re.findall(r"^([a-z][A-Za-z0-9_.]+)\t", (ROOT / "lib.sh").read_text(), re.M))
-missing = sorted(names_it - set(json.loads((ROOT / "ui" / "app_names_en.json").read_text())))
-check("ogni nome italiano ha l'inglese", not missing, missing)
+check("no name: no reason", apps["com.vendor.mystery"]["reason"] is None, apps["com.vendor.mystery"])
+rows = re.findall(r"^([a-z][A-Za-z0-9_.]+)\t([^\t\n]*)\t?([^\t\n]*)$",
+                  (ROOT / "lib.sh").read_text().split("NAMES='")[1].split("'")[0], re.M)
+check("every app name has Italian and English", rows and all(it and en for _, it, en in rows),
+      [r for r in rows if not (r[1] and r[2])])
 
 code, r = call("disable", {**S, "packages": ["com.x.a%d" % i for i in range(11)]})
-check("rifiuta più di 10 app", code == 400 and r["error"] == "too_many" and r["params"]["max"] == 10, r)
+check("refuses more than 10 apps", code == 400 and r["error"] == "too_many" and r["params"]["max"] == 10, r)
 code, r = call("disable", {**S, "packages": ["com.x; rm -rf /"]})
-check("rifiuta nomi strani", code == 400 and r["error"] == "bad_package", r)
+check("refuses odd names", code == 400 and r["error"] == "bad_package", r)
 code, r = call("disable", {"serial": "$(reboot)", "packages": ["com.facebook.appmanager"]})
-check("rifiuta telefoni strani", code == 400 and r["error"] == "bad_target", r)
+check("refuses odd phones", code == 400 and r["error"] == "bad_target", r)
 
 code, r = call("disable", {**S, "packages": ["com.google.android.gms", "com.samsung.android.bixby.agent"]})
-check("disable.sh rifiuta le mai", "com.google.android.gms" in r.get("refused", []), r)
-check("spegne Bixby", r.get("off") == ["com.samsung.android.bixby.agent"] and is_off("com.samsung.android.bixby.agent"), r)
+check("disable.sh refuses never apps", "com.google.android.gms" in r.get("refused", []), r)
+check("turns Bixby off", r.get("off") == ["com.samsung.android.bixby.agent"] and is_off("com.samsung.android.bixby.agent"), r)
 
-code, r = call("disable", {**S, "packages": ["com.vendor.lockedapp"]})
-check("segnala l'app che il telefono rifiuta", r.get("failed") == ["com.vendor.lockedapp"], r)
+code, r = call("disable", {**S, "packages": ["com.vendor.lockedapp"], "lang": "it"})
+check("reports the app the phone refuses (Italian)", r.get("failed") == ["com.vendor.lockedapp"], r)
 code, r = call("disable", {**S, "packages": ["com.vendor.lockedapp"], "uninstall": True})
-check("la toglie per l'utente su richiesta", r.get("removed") == ["com.vendor.lockedapp"], r)
+check("removes it for the user on request", r.get("removed") == ["com.vendor.lockedapp"], r)
 
 code, r = call("check", S)
-check("check.sh: tutto a posto", code == 200 and r["rc"] == 0, r)
+check("check.sh: all good", code == 200 and r["rc"] == 0 and not r["empty"], r)
 
 code, r = call("reboot", S)
-check("riavvia e aspetta il telefono", code == 200 and r.get("ok"), r)
+check("restarts and waits for the phone", code == 200 and r.get("ok"), r)
 
 code, r = call("undo", {**S, "packages": ["com.samsung.android.bixby.agent", "com.vendor.lockedapp"]})
-check("riaccende il gruppo", sorted(r.get("restored", [])) == ["com.samsung.android.bixby.agent", "com.vendor.lockedapp"]
+check("turns the group back on", sorted(r.get("restored", [])) == ["com.samsung.android.bixby.agent", "com.vendor.lockedapp"]
       and not is_off("com.samsung.android.bixby.agent"), r)
 
-check("errori del telefono hanno un codice", ui.phone_error("Nessun telefono collegato.").code == "disconnected"
-      and ui.phone_error("Consentire il debug USB?").code == "unauthorized")
-check("nome con parentesi non è un motivo", ui.split_name("Pagine gialle (nome delle aziende)") == ("Pagine gialle (nome delle aziende)", ""))
+check("phone errors have a code", ui.phone_error("No phone connected.").code == "disconnected"
+      and ui.phone_error("Nessun telefono collegato.").code == "disconnected"
+      and ui.phone_error('The phone asks "Allow USB debugging?"').code == "unauthorized")
 
 code, r = call("quit")
-check("si chiude", code == 200)
+check("closes", code == 200)
 
 print()
 if fails:
-    print(f"{fails} test dell'interfaccia falliti.")
+    print(f"{fails} app tests failed.")
     sys.exit(1)
-print("Interfaccia: tutti i test passati.")
+print("App: all tests passed.")

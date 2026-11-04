@@ -40,20 +40,10 @@ ADB_URL = "https://dl.google.com/android/repository/platform-tools-latest-{}.zip
 PKG_RE = re.compile(r"^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$")
 TARGET_RE = re.compile(r"^[A-Za-z0-9._:\-]{1,128}$")
 ADDR_RE = re.compile(r"^\d{1,3}(\.\d{1,3}){3}:\d{1,5}$")
-VERDICTS = ("mai", "serve", "via", "dubbio", "tua")
-ROW_RE = re.compile(r"^(mai|serve|via|dubbio|tua)\s+(on|off|tolta)\s+(\S+)\s*(.*)$")
+VERDICTS = ("never", "useful", "bloat", "unknown", "yours")
+STATES = ("on", "off", "removed")
+LANGS = ("en", "it")
 MAX_GROUP = 10
-
-# Reasons that classify() in lib.sh appends in brackets: Italian pattern -> English.
-REASONS = [
-    (re.compile(r"^Android la tiene sempre accesa$"), "Android always keeps it on"),
-    (re.compile(r"^app predefinita: (\w+)$"), r"default app: \1"),
-    (re.compile(r"^tastiera in uso$"), "keyboard in use"),
-    (re.compile(r"^amministratore del dispositivo$"), "device administrator"),
-    (re.compile(r"^ha salvato una rete Wi-Fi: spegnerla la cancella$"), "it saved a Wi-Fi network: turning it off deletes it"),
-    (re.compile(r"^servizio di accessibilità acceso$"), "accessibility service in use"),
-]
-CHIP_IT = "Componente del chip: rete, chiamate, sensori"
 
 # One phone operation at a time.
 PHONE_LOCK = threading.Lock()
@@ -65,16 +55,6 @@ class UserError(Exception):
     def __init__(self, code, detail="", **params):
         super().__init__(code)
         self.code, self.detail, self.params = code, detail, params
-
-
-def load_names_en():
-    try:
-        return json.loads((UI / "app_names_en.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-
-
-NAMES_EN = load_names_en()
 
 
 # --------------------------------------------------------------------------------------------
@@ -119,13 +99,14 @@ def system_name():
 # --------------------------------------------------------------------------------------------
 # Running scripts and adb
 
-def run_script(name, args=(), extra_env=None, timeout=600):
+def run_script(name, args=(), extra_env=None, timeout=600, lang="en"):
     sh = find_sh()
     if not sh:
         raise UserError("no_sh")
     if not find_adb():
         raise UserError("no_adb")
     env = tool_env()
+    env["PD_LANG"] = lang if lang in LANGS else "en"
     if extra_env:
         env.update(extra_env)
     try:
@@ -151,12 +132,16 @@ def run_adb(args, timeout=30):
 
 
 def phone_error(out):
-    """Turns a script failure into an error code the page can explain."""
-    if "unauthorized" in out or "Consentire il debug" in out:
+    """Turns a script failure into an error code the page can explain (any message language)."""
+    if re.search(r"unauthorized|Allow USB debugging|Consentire il debug", out):
         return UserError("unauthorized", out)
-    if "Nessun telefono" in out or "Non riesco a raggiungere" in out or "perso il collegamento" in out:
+    if re.search(r"No phone connected|Can't reach|Lost the connection|Nessun telefono|Non riesco a raggiungere|perso il collegamento", out):
         return UserError("disconnected", out)
     return UserError("read_failed", out)
+
+
+def lang_of(data):
+    return data.get("lang") if data.get("lang") in LANGS else "en"
 
 
 def target_arg(data):
@@ -249,7 +234,7 @@ def act_connect(data):
 
 
 def act_identify(data):
-    rc, out = run_script("identify.sh", [target_arg(data), "--kv"], timeout=120)
+    rc, out = run_script("identify.sh", [target_arg(data), "--kv"], timeout=120, lang=lang_of(data))
     kv = dict(l.split("=", 1) for l in out.splitlines() if re.match(r"^[A-Z_]+=", l))
     if rc != 0 or not kv:
         raise phone_error(out)
@@ -260,49 +245,32 @@ def act_confirm(data):
     name = str(data.get("name", "")).strip()
     if not name or len(name) > 80 or "\n" in name:
         raise UserError("bad_name")
-    rc, out = run_script("identify.sh", [target_arg(data), "--conferma", name], timeout=60)
+    rc, out = run_script("identify.sh", [target_arg(data), "--confirm", name], timeout=60, lang=lang_of(data))
     if rc != 0:
         raise phone_error(out)
     return {"ok": True}
 
 
 def act_info(data):
-    rc, out = run_script("info.sh", [target_arg(data)], timeout=120)
+    rc, out = run_script("info.sh", [target_arg(data)], timeout=120, lang=lang_of(data))
     if rc != 0:
         raise phone_error(out)
-    m = re.search(r"RAM: (\d+) MB, libera ora (\d+) MB", out)
+    m = re.search(r"RAM: (\d+) MB, free (\d+) MB", out)
     return {"ram_total": int(m.group(1)) if m else None, "ram_free": int(m.group(2)) if m else None,
-            "managed": "è gestito" in out, "output": out}
-
-
-def split_name(raw):
-    """'Name (reason)' -> (name, reason) when the bracket is one of the known reasons."""
-    m = re.match(r"^(.*?)\s*\(([^()]*)\)$", raw)
-    if m and any(p.match(m.group(2)) for p, _ in REASONS):
-        return m.group(1), m.group(2)
-    return raw, ""
-
-
-def reason_en(reason):
-    for p, en in REASONS:
-        if p.match(reason):
-            return p.sub(en, reason)
-    return reason
+            "managed": bool(re.search(r"^MANAGED:", out, re.M)), "output": out}
 
 
 def act_apps(data):
-    rc, out = run_script("candidates.sh", [target_arg(data)], timeout=300)
+    rc, out = run_script("candidates.sh", [target_arg(data), "--tsv"], timeout=300, lang=lang_of(data))
     apps = []
     for line in out.splitlines():
-        m = ROW_RE.match(line)
-        if not m:
+        f = (line.split("\t") + [""] * 7)[:7]
+        if f[0] not in VERDICTS or f[1] not in STATES:
             continue
-        pkg = m.group(3)
-        name, reason = split_name(m.group(4).strip())
-        en = NAMES_EN.get(pkg) or (NAMES_EN.get("_chip") if name == CHIP_IT else "")
-        apps.append({"verdict": m.group(1), "state": m.group(2), "package": pkg,
-                     "name": {"it": name, "en": en or name},
-                     "reason": {"it": reason, "en": reason_en(reason)} if reason else None})
+        verdict, state, pkg, name_it, name_en, why_it, why_en = f
+        apps.append({"verdict": verdict, "state": state, "package": pkg,
+                     "name": {"it": name_it, "en": name_en or name_it},
+                     "reason": {"it": why_it, "en": why_en or why_it} if why_it or why_en else None})
     if rc != 0 or not apps:
         raise phone_error(out)
     return {"apps": apps}
@@ -310,10 +278,11 @@ def act_apps(data):
 
 def parse_changes(out):
     res = {"off": [], "removed": [], "restored": [], "failed": [], "refused": [], "skipped": []}
-    keys = {"spenta": "off", "tolta": "removed", "accesa": "restored", "ERRORE": "failed",
-            "NO": "refused", "salto": "skipped"}
+    # Every script line about an app starts with an English label, whatever the language.
+    keys = {"off": "off", "removed": "removed", "on": "restored", "ERROR": "failed",
+            "NO": "refused", "skip": "skipped"}
     for line in out.splitlines():
-        m = re.match(r"^\s+(spenta|tolta|accesa|ERRORE|NO|salto)\s+([A-Za-z0-9_.]+)", line)
+        m = re.match(r"^\s+(off|removed|on|ERROR|NO|skip)\s+([A-Za-z0-9_.]+)", line)
         if m:
             res[keys[m.group(1)]].append(m.group(2).rstrip(":"))
     return res
@@ -324,7 +293,7 @@ def act_disable(data):
     env = {"YES": "1"}
     if data.get("uninstall"):
         env["UNINSTALL"] = "1"
-    rc, out = run_script("disable.sh", [target_arg(data), *pkgs], env, timeout=600)
+    rc, out = run_script("disable.sh", [target_arg(data), *pkgs], env, timeout=600, lang=lang_of(data))
     res = parse_changes(out)
     if rc != 0 and not any(res.values()):
         raise phone_error(out)
@@ -337,21 +306,22 @@ def act_undo(data):
         args.append("--all")
     elif data.get("packages"):
         args += packages_arg(data, limit=None)
-    rc, out = run_script("undo.sh", args, timeout=900)
+    rc, out = run_script("undo.sh", args, timeout=900, lang=lang_of(data))
     res = parse_changes(out)
     if rc != 0 and not any(res.values()):
         raise phone_error(out)
-    return {"rc": rc, "output": out, "nothing": "Non trovo modifiche" in out, **res}
+    return {"rc": rc, "output": out, **res}
 
 
 def act_check(data):
     args = [target_arg(data)] + (["--fix"] if data.get("fix") else [])
-    rc, out = run_script("check.sh", args, timeout=600)
-    changed = len(re.findall(r"^\s+CAMBIATO", out, re.M))
-    fixed = len(re.findall(r"^\s+sistemato", out, re.M))
-    if rc != 0 and not changed and "Nessuna modifica" not in out:
+    rc, out = run_script("check.sh", args, timeout=600, lang=lang_of(data))
+    changed = len(re.findall(r"^\s+CHANGED\s", out, re.M))
+    fixed = len(re.findall(r"^\s+fixed\s", out, re.M))
+    checked = len(re.findall(r"^\s+(ok|fixed|CHANGED|gone)\s", out, re.M))
+    if rc != 0 and not changed:
         raise phone_error(out)
-    return {"rc": rc, "output": out, "changed": changed, "fixed": fixed, "empty": "Nessuna modifica" in out}
+    return {"rc": rc, "output": out, "changed": changed, "fixed": fixed, "empty": checked == 0}
 
 
 def act_reboot(data):

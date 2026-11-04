@@ -102,8 +102,8 @@ Resta aperta una piccola finestra (non chiuderla) e l'app si apre nel browser.
    Se qualcosa non va, un pulsante riaccende il gruppo.
 5. **Fine**: memoria libera prima e dopo, e il promemoria per spegnere il Debug USB.
 
-Sotto usa gli stessi script, con le stesse protezioni: le app `mai` restano rifiutate e le
-`dubbio` si possono scegliere solo con la modalità esperto. Se chiudi a metà, alla riapertura
+Sotto usa gli stessi script, con le stesse protezioni: le app `never` restano rifiutate e le
+`unknown` si possono scegliere solo con la modalità esperto. Se chiudi a metà, alla riapertura
 riprende da dove eri.
 
 ### 2b. Con Claude Code
@@ -112,12 +112,13 @@ Scarica questo repository, apri [Claude Code](https://claude.com/claude-code) ne
 cartella e scrivi:
 
 ```
-/pulisci
+/clean
 ```
 
 Claude legge da solo [CLAUDE.md](CLAUDE.md), con la procedura e le regole: ti avvisa dei
 rischi, identifica il modello, cerca online le app note per quel telefono, ti propone gruppi
-di app e aspetta il tuo sì per ognuno. Ci sono anche `/identifica` e `/annulla`.
+di app e aspetta il tuo sì per ognuno. Ci sono anche `/identify` (che telefono è) e `/undo` (annulla). Scrivi pure in italiano:
+Claude risponde in italiano.
 
 Il prompt completo da incollare, utile anche con Codex, Gemini CLI o Cursor, è in
 [PROMPT.md](PROMPT.md).
@@ -128,7 +129,7 @@ vede il tuo telefono. Serve qualcosa che giri sul tuo computer.
 ### 2c. Procedura guidata nel terminale, senza AI
 
 ```
-sh guida.sh
+sh guide.sh
 ```
 
 Fa tutto a domande: controlla il collegamento (e ti aiuta se il telefono non si vede, anche
@@ -147,6 +148,10 @@ sh disable.sh <app> <app> ...  # spegne, chiedendo conferma
 sh undo.sh                     # riaccende tutto quello che hai spento
 sh check.sh --fix              # dopo un aggiornamento, rispegne ciò che è tornato
 ```
+
+Gli script parlano italiano se il computer è in italiano, altrimenti inglese. Per scegliere:
+`PD_LANG=it sh guide.sh` (oppure `PD_LANG=en`). Le etichette (`never`, `bloat`, `off`…) sono
+sempre in inglese.
 
 Con più dispositivi collegati, o in Wi-Fi, metti il telefono come primo argomento:
 `sh candidates.sh 192.168.1.20:41234` oppure `sh candidates.sh R58N123ABC` (il seriale di
@@ -181,41 +186,41 @@ proprietà note (Xiaomi, Oppo, OnePlus, Realme, vivo, Motorola, Asus...) e dice 
 
 | certezza | da dove viene |
 | --- | --- |
-| `confermato` | l'hai confermato tu, guardando Impostazioni > Info telefono |
-| `alta` | il produttore scrive il nome commerciale in una proprietà di sistema (o è un Pixel) |
-| `media` | dal nome del dispositivo, che però si può cambiare a mano |
-| `bassa` | c'è solo il codice modello: va confermato |
+| `confirmed` | l'hai confermato tu, guardando Impostazioni > Info telefono |
+| `high` | il produttore scrive il nome commerciale in una proprietà di sistema (o è un Pixel) |
+| `medium` | dal nome del dispositivo, che però si può cambiare a mano |
+| `low` | c'è solo il codice modello: va confermato |
 
-Se non è `alta` o `confermato`, apri **Impostazioni > Info telefono**, controlla che il numero
+Se non è `high` o `confirmed`, apri **Impostazioni > Info telefono**, controlla che il numero
 di modello sia lo stesso e salva il nome:
 
 ```
-sh identify.sh --conferma "Galaxy A54 5G"
+sh identify.sh --confirm "Galaxy A54 5G"
 ```
 
 Per i Samsung lo script ricava comunque la serie e la variante dal codice (SM-A = Galaxy A,
 finale B = europea). `sh identify.sh --kv` dà le stesse informazioni come righe
 `CHIAVE=valore`, ed è quello che usa Claude. La scheda resta salvata in
-`changes/<telefono>.identita.txt`.
+`changes/<telefono>.identity.txt`.
 
 ## I verdetti di `candidates.sh`
 
 ```
-mai     on     com.google.android.gms              Google Play Services
-mai     on     com.sec.android.app.launcher        Schermata Home Samsung (app predefinita: HOME)
-via     on     com.samsung.android.bixby.agent     Bixby
-via     on     com.facebook.appmanager             Installer nascosto di Facebook
-dubbio  on     com.vendor.qualcosa
-tua     on     com.whatsapp
+never    on       com.google.android.gms              Google Play Services
+never    on       com.sec.android.app.launcher        Schermata Home Samsung (app predefinita: HOME)
+bloat    on       com.samsung.android.bixby.agent     Bixby
+bloat    on       com.facebook.appmanager             Installer nascosto di Facebook
+unknown  on       com.vendor.qualcosa
+yours    on       com.whatsapp
 ```
 
 | verdetto | significato |
 | --- | --- |
-| `mai` | serve al telefono, è un'app predefinita o la tastiera in uso, è un amministratore del dispositivo, ha salvato il Wi-Fi, o Android la tiene sempre accesa. `disable.sh` la rifiuta. |
-| `serve` | porta una funzione: sveglie, pagamenti, Android Auto, accessibilità... Via solo se non la usi. |
-| `via` | di solito si può spegnere. |
-| `dubbio` | sconosciuta: lasciala accesa finché non sai cos'è. |
-| `tua` | installata da te: disinstallala dalle Impostazioni se non ti serve. |
+| `never` | serve al telefono, è un'app predefinita o la tastiera in uso, è un amministratore del dispositivo, ha salvato il Wi-Fi, o Android la tiene sempre accesa. `disable.sh` la rifiuta. |
+| `useful` | porta una funzione: sveglie, pagamenti, Android Auto, accessibilità... Via solo se non la usi. |
+| `bloat` | di solito si può spegnere. |
+| `unknown` | sconosciuta: lasciala accesa finché non sai cos'è. |
+| `yours` | installata da te: disinstallala dalle Impostazioni se non ti serve. |
 
 [docs/pulizia.md](docs/pulizia.md) spiega le regole dietro i verdetti e cosa provare dopo ogni
 gruppo.
@@ -281,8 +286,9 @@ autorizzato può controllare il telefono. Riaccendilo solo quando ti serve.
 
 ## Per chi sviluppa
 
-Gli script sono shell POSIX, senza dipendenze oltre ad `adb`. Le liste di app (`mai`, `serve`,
-`via`) e i nomi in italiano stanno in `lib.sh`, quelli in inglese in `ui/app_names_en.json`.
+Gli script sono shell POSIX, senza dipendenze oltre ad `adb`. Le liste di app (`never`, `useful`,
+`bloat`) e i nomi delle app in italiano e inglese stanno in `lib.sh`. Codice, nomi, commenti
+ed etichette sono in inglese; i messaggi per l'utente in italiano e inglese (`say` in `lib.sh`).
 
 ```
 sh ci/test.sh       # prova tutti gli script su un telefono simulato, senza telefono vero
@@ -298,7 +304,7 @@ Il telefono simulato (`ci/fake-adb/`) è un finto `adb` che risponde ai comandi 
 script. Per aggiungere un caso, modifica il telefono finto in `ci/test.sh`.
 
 Le istruzioni per gli agenti sono in `CLAUDE.md` (Codex e altri le trovano tramite
-`AGENTS.md`); i comandi `/pulisci`, `/identifica` e `/annulla` in `.claude/commands/`.
+`AGENTS.md`); i comandi `/clean`, `/identify` e `/undo` in `.claude/commands/`.
 `.claude/settings.json` lascia lanciare senza conferma solo gli script che non cambiano niente
 e blocca i comandi adb distruttivi.
 

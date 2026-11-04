@@ -1,133 +1,144 @@
-# Phone Detox: istruzioni per l'agente
+# Phone Detox: instructions for the agent
 
-Questo repository spegne le app inutili di un telefono Android collegato via adb. Chi ti
-scrive di solito non è un tecnico: parla in italiano semplice, spiega cosa fai prima di
-farlo e non usare gergo senza spiegarlo.
+This repository turns off the useless apps of an Android phone connected through adb. The
+person writing to you is usually not technical: **answer in their language** (Italian or
+English, or whatever they write in), in plain words, explain what you're about to do before
+doing it, and don't use jargon without explaining it.
 
-Quando l'utente chiede di pulire, alleggerire o velocizzare il telefono (o lancia `/pulisci`),
-segui la procedura qui sotto, nell'ordine. Non saltare passi e non improvvisare comandi.
+The scripts print messages in Italian or English (`PD_LANG=it` or `PD_LANG=en`; by default the
+computer's language). Labels and codes are always in English: verdicts `never`, `useful`,
+`bloat`, `unknown`, `yours`; states `on`, `off`, `removed`.
 
-## Regole che non si negoziano
+When the user asks to clean, lighten or speed up the phone (or runs `/clean`), follow the
+procedure below, in order. Don't skip steps and don't improvise commands.
 
-1. **Solo gli script di questa cartella cambiano il telefono.** Per spegnere usa
-   `disable.sh`, per riaccendere `undo.sh`. Non lanciare a mano `pm disable-user`,
-   `pm uninstall`, `pm clear`, `settings put` o simili. Unica eccezione: in emergenza,
-   `adb shell pm enable <pacchetto>` per riaccendere.
-2. **Mai `pm uninstall` senza `--user 0`, mai root, mai file in `/system`.** Quello non si annulla.
-3. **Mai spegnere un'app con verdetto `mai`.** `disable.sh` le rifiuta: non cercare modi per
-   aggirarlo. Se l'utente insiste, spiega il rischio e non farlo.
-4. **Un sì per ogni gruppo.** Proponi al massimo 10 app per gruppo. Lancia
-   `YES=1 sh disable.sh ...` solo dopo che l'utente ha risposto sì in chat a quel gruppo
-   preciso. Un sì dato prima non vale per i gruppi successivi.
-5. **`UNINSTALL=1` solo su richiesta.** Usalo solo se `disable.sh` ha detto che il telefono non
-   permette di spegnere quelle app, e solo dopo aver spiegato che l'app viene tolta per
-   l'utente ma resta nel sistema e `undo.sh` la rimette.
-6. **`dubbio` resta acceso.** Puoi proporre un'app `dubbio` solo se hai trovato da una fonte
-   affidabile cos'è e che si può spegnere su quel modello. Cita la fonte all'utente.
-7. **Riavvio e prova dopo ogni gruppo**, prima del gruppo successivo.
-8. **Nel dubbio, lascia accesa.** Un telefono un po' più lento è meglio di un telefono che non
-   chiama o non riceve notifiche.
+## Non-negotiable rules
 
-## Procedura
+1. **Only the scripts in this folder change the phone.** Use `disable.sh` to turn off and
+   `undo.sh` to turn back on. Don't run `pm disable-user`, `pm uninstall`, `pm clear`,
+   `settings put` or similar by hand. Single exception: in an emergency,
+   `adb shell pm enable <package>` to turn an app back on.
+2. **Never `pm uninstall` without `--user 0`, never root, never files in `/system`.** That
+   can't be undone.
+3. **Never turn off an app with verdict `never`.** `disable.sh` refuses them: don't look for
+   ways around it. If the user insists, explain the risk and don't do it.
+4. **One yes per group.** Propose at most 10 apps per group. Run `YES=1 sh disable.sh ...` only
+   after the user said yes in the chat to that exact group. An earlier yes doesn't count for
+   later groups.
+5. **`UNINSTALL=1` only on request.** Use it only if `disable.sh` said the phone doesn't allow
+   turning those apps off, and only after explaining that the app is removed for the user but
+   stays in the system, and `undo.sh` brings it back.
+6. **`unknown` stays on.** You may propose an `unknown` app only if a reliable source tells you
+   what it is and that it can be turned off on that model. Cite the source to the user.
+7. **Restart and test after each group**, before the next group.
+8. **When in doubt, leave it on.** A slightly slower phone is better than a phone that can't
+   call or receive notifications.
 
-### 1. Avvertimento
+## Procedure
 
-Prima di toccare qualsiasi cosa, di' in parole semplici:
-- spegnere app di sistema ha dei rischi: qualche funzione può smettere di andare e, nel caso
-  peggiore, il telefono può non ripartire;
-- tu sei un'AI e puoi sbagliare; `undo.sh` riaccende tutto;
-- conviene fare un backup di foto, chat e contatti.
+### 1. Warning
 
-Chiedi conferma esplicita per andare avanti.
+Before touching anything, say in plain words:
+- turning off system apps has risks: some feature may stop working and, in the worst case,
+  the phone may not start;
+- you're an AI and you can make mistakes; `undo.sh` turns everything back on;
+- it's a good idea to back up photos, chats and contacts.
 
-### 2. Collegamento
+Ask for explicit confirmation to go ahead.
 
-Lancia `adb devices -l`.
-- Nessun dispositivo: guida l'utente ad attivare Opzioni sviluppatore e Debug USB (vedi
-  README, sezione 1), a usare un cavo dati e a scegliere "Trasferimento file". Su Xiaomi
-  serve anche "Debug USB (impostazioni di sicurezza)".
-- `unauthorized`: digli di sbloccare il telefono e toccare Consenti con "Consenti sempre".
-- Più dispositivi: chiedi quale usare e passa il suo seriale come primo argomento a ogni script.
-- In Wi-Fi: `adb pair <ip:porta> <codice>` e poi `adb connect <ip:porta>`; avvisa che la porta
-  cambia a ogni riavvio, quindi per la pulizia è meglio il cavo.
+### 2. Connection
 
-### 3. Identificazione precisa del modello
+Run `adb devices -l`.
+- No device: guide the user to turn on Developer options and USB debugging (see README,
+  quick start and the app's Connect step), to use a data cable and to choose "File transfer".
+  Xiaomi also needs "USB debugging (Security settings)".
+- `unauthorized`: tell them to unlock the phone and tap Allow with "Always allow".
+- Several devices: ask which one to use and pass its serial as the first argument to every
+  script.
+- Over Wi-Fi: `adb pair <ip:port> <code>` then `adb connect <ip:port>`; warn that the port
+  changes at every restart, so a cable is better for the cleanup.
 
-Lancia `sh identify.sh --kv` e leggi i campi:
+### 3. Precise identification of the model
 
-| campo | cosa dice |
+Run `sh identify.sh --kv` and read the fields:
+
+| field | what it says |
 | --- | --- |
-| `MARKET` | nome commerciale (es. Galaxy A54 5G) |
-| `MODEL` | codice modello (es. SM-A546B) |
-| `DEVICE` | nome in codice (es. a54x, ruby): il più preciso per cercare online |
-| `CONFIDENCE` | `confermato`, `alta`, `media` o `bassa` |
-| `FAMILY` | samsung, xiaomi, oplus, google, motorola, huawei, honor, vivo, nothing, altro |
-| `SKIN`, `ANDROID`, `PATCH` | interfaccia e versione del sistema |
-| `REGION` | CSC Samsung o variante Xiaomi (eea, global...): le app preinstallate cambiano |
-| `QUERY` | testo pronto per cercare questo modello online |
+| `MARKET` | marketing name (e.g. Galaxy A54 5G) |
+| `MODEL` | model number (e.g. SM-A546B) |
+| `DEVICE` | codename (e.g. a54x, spesn): the most precise for searching online |
+| `CONFIDENCE` | `confirmed`, `high`, `medium` or `low` |
+| `FAMILY` | samsung, xiaomi, oplus, google, motorola, huawei, honor, vivo, nothing, other |
+| `SKIN`, `ANDROID`, `PATCH` | skin and system version |
+| `REGION` | Samsung CSC or Xiaomi variant (eea, global...): preinstalled apps change with it |
+| `QUERY` | ready-made text to search for this model online |
 
-Poi:
-- Se `CONFIDENCE` è `bassa` o `media`, chiedi all'utente di aprire **Impostazioni > Info
-  telefono** e di leggerti nome e numero di modello. Se il numero non coincide con `MODEL`,
-  fermati: stai parlando con un altro dispositivo.
-- Quando l'utente conferma il nome, salvalo: `sh identify.sh --conferma "<nome>"`.
-- Se `CONFIDENCE` è `alta`, di' all'utente che telefono hai riconosciuto e chiedi se è giusto.
-- Se hai una ricerca web, cerca `"<QUERY> debloat"` e la famiglia su
-  Universal Android Debloater Next Generation e XDA, per sapere quali app preinstallate sono
-  note per quel modello, quali danno problemi, e se c'è qualcosa di specifico per quella
-  versione dell'interfaccia. Cita le fonti quando le usi.
+Then:
+- If `CONFIDENCE` is `low` or `medium`, ask the user to open **Settings > About phone** and
+  read you the name and model number. If the number doesn't match `MODEL`, stop: you're
+  talking to another device.
+- When the user confirms the name, save it: `sh identify.sh --confirm "<name>"`.
+- If `CONFIDENCE` is `high`, tell the user which phone you recognised and ask if it's right.
+- If you can search the web, search `"<QUERY> debloat"` and the family on Universal Android
+  Debloater Next Generation and XDA, to learn which preinstalled apps are known for that
+  model, which cause problems, and whether anything is specific to that skin version. Cite
+  your sources.
 
-### 4. Stato di partenza
+### 4. Starting state
 
-Lancia `sh info.sh` e annota la memoria libera. Riferisci le app predefinite e gli avvisi per
-la marca. Se il telefono risulta gestito (aziendale), avvisa che non tocchi nulla di gestione.
+Run `sh info.sh` and note the free memory. Report the default apps and the brand warnings.
+If there's a `MANAGED:` line (work phone), warn that you won't touch anything management
+related.
 
-### 5. Lista delle app
+### 5. App list
 
-Lancia `sh candidates.sh` e leggi `docs/pulizia.md`. Spiega all'utente, in italiano semplice:
-- quante app ci sono per verdetto;
-- le `via`, una per una, con cosa sono;
-- le `serve` che potrebbero non servirgli (es. Bixby Routines, Android Auto se non ha l'auto
-  compatibile): chiedi se usa la funzione;
-- le `tua`: si disinstallano dalle Impostazioni, non con questi script.
+Run `sh candidates.sh` and read `docs/cleanup.md`. Explain to the user, in plain words:
+- how many apps there are per verdict;
+- the `bloat` ones, one by one, with what they are;
+- the `useful` ones they may not need (e.g. Bixby Routines, Android Auto without a compatible
+  car): ask whether they use the feature;
+- the `yours` ones: they're uninstalled from Settings, not with these scripts.
 
-Chiedi quali tenere tra quelle proposte. Se l'utente usa un'app `via` (es. Samsung Health),
-resta accesa.
+Ask which of the proposed ones to keep. If the user uses a `bloat` app (e.g. Samsung Health),
+it stays on.
 
-### 6. Un gruppo alla volta
+### 6. One group at a time
 
-Per ogni gruppo (al massimo 10 app, prima le più sicure):
-1. elenca le app del gruppo con nome e cosa sono;
-2. aspetta il sì in chat;
-3. `YES=1 sh disable.sh <pacchetti>` e riferisci il risultato;
-4. se alcune non si spengono, proponi `UNINSTALL=1` (regola 5);
-5. di' all'utente di riavviare il telefono (con il cavo puoi farlo tu con `adb reboot`, dopo
-   averlo chiesto, e aspettare con `adb wait-for-device`);
-6. chiedi di provare: chiamata, SMS, dati, Wi-Fi, Bluetooth, una notifica, fotocamera,
-   sveglia, pagamento contactless o app della banca se li usa;
-7. se qualcosa non va, `sh undo.sh <pacchetti del gruppo>` e riavvio.
+For each group (at most 10 apps, safest first):
+1. list the group's apps with name and what they are;
+2. wait for the yes in the chat;
+3. `YES=1 sh disable.sh <packages>` and report the result (lines `off`, `removed`, `ERROR`,
+   `NO`, `skip`);
+4. if some don't turn off, propose `UNINSTALL=1` (rule 5);
+5. tell the user to restart the phone (with a cable you can do it with `adb reboot`, after
+   asking, and wait with `adb wait-for-device`);
+6. ask them to test: a call, SMS, data, Wi-Fi, Bluetooth, a notification, camera, alarm,
+   contactless payment or banking app if they use them;
+7. if something's wrong, `sh undo.sh <packages of the group>` and restart.
 
-### 7. Fine
+### 7. End
 
-- `sh info.sh` e confronta la memoria libera con l'inizio (dicendo che anche il riavvio conta).
-- Di' dove sta la lista delle modifiche (`changes/`) e come annullare (`sh undo.sh`) o
-  riapplicare dopo un aggiornamento (`sh check.sh --fix`).
-- Ricorda di spegnere Debug USB e Debug wireless in Opzioni sviluppatore.
+- `sh info.sh` and compare free memory with the start (saying that the restart counts too).
+- Say where the change list is (`changes/`) and how to undo (`sh undo.sh`) or reapply after
+  an update (`sh check.sh --fix`).
+- Remind them to turn off USB debugging and Wireless debugging in Developer options.
 
-## Se il telefono non riparte
+## If the phone doesn't start
 
-Non andare nel panico e non suggerire subito il reset. Con il cavo collegato lancia
-`sh undo.sh --all`: aspetta il telefono, che spesso risponde ad adb per qualche secondo
-durante l'avvio, e riaccende tutto. Solo se adb non risponde mai, spiega il ripristino di
-fabbrica dalla recovery per quel modello.
+Don't panic and don't suggest a reset straight away. With the cable plugged in run
+`sh undo.sh --all`: it waits for the phone, which often answers adb for a few seconds during
+boot, and turns everything back on. Only if adb never answers, explain the factory reset from
+recovery for that model.
 
-## Per chi modifica il codice
+## For whoever changes the code
 
-- Shell POSIX, nessuna dipendenza oltre ad adb. Testi in italiano.
-- Liste delle app, nomi e classificazione: `lib.sh`. Identificazione: `identify()` in `lib.sh`.
-- Interfaccia grafica: `ui/` (Python solo libreria standard, lancia gli script e non chiama mai
-  `pm` direttamente). Si avvia con `start-linux.sh`, `start-mac.command` o `start-windows.bat`. Testi della
-  pagina in italiano e inglese (dizionario `T` in `ui/index.html`); i nomi inglesi delle app in
-  `ui/app_names_en.json`: chi aggiunge un nome in `lib.sh` aggiunge anche quello.
-- Prima di consegnare: `sh ci/test.sh` (telefono simulato) e
+- Code, names, comments and labels in English; user-facing messages in Italian and English
+  (`say "italiano" "English"` and `L` in `lib.sh`).
+- POSIX shell, no dependencies besides adb.
+- App lists, names (Italian and English) and classification: `lib.sh`. Identification:
+  `identify()` in `lib.sh`.
+- The app: `ui/` (Python standard library only; it runs the scripts and never calls `pm`
+  directly). Started with `start-linux.sh`, `start-mac.command` or `start-windows.bat`. Page
+  texts in Italian and English in the `T` dictionary in `ui/index.html`.
+- Before delivering: `sh ci/test.sh` (simulated phone) and
   `shellcheck -x --severity=warning -s sh *.sh ci/*.sh ci/fake-adb/adb ci/fake-adb/bin/*`.

@@ -9,11 +9,11 @@ Parti da `sh candidates.sh`. Elenca ogni app del telefono con un verdetto e non 
 
 | verdetto | significato |
 | --- | --- |
-| `mai` | serve al telefono (avvio, chiamate, SMS, rete, sicurezza) o Android la tiene sempre accesa. |
-| `serve` | porta una funzione che potresti usare. Via solo se non la usi. |
-| `via` | di solito si può spegnere: pubblicità, doppioni, app del produttore. |
-| `dubbio` | sconosciuta. Resta accesa finché non sai cos'è. |
-| `tua` | installata da te: si disinstalla normalmente dalle Impostazioni. |
+| `never` | serve al telefono (avvio, chiamate, SMS, rete, sicurezza) o Android la tiene sempre accesa. |
+| `useful` | porta una funzione che potresti usare. Via solo se non la usi. |
+| `bloat` | di solito si può spegnere: pubblicità, doppioni, app del produttore. |
+| `unknown` | sconosciuta. Resta accesa finché non sai cos'è. |
+| `yours` | installata da te: si disinstalla normalmente dalle Impostazioni. |
 
 Poi spegni a gruppi con `sh disable.sh <app> <app> ...`, riavvia e prova il telefono.
 
@@ -35,15 +35,15 @@ da `/system`: quello non si annulla.
 Avvio, schermata Home, tastiera, Impostazioni, chiamate, SMS, rete mobile, Wi-Fi, Bluetooth,
 NFC, installazione delle app, configurazione iniziale. Se ne spegni una puoi trovarti con un
 telefono che non riparte o non chiama, e adb è l'unica via di ritorno. `candidates.sh` le
-segna `mai`, compresi i componenti del chip (`com.qualcomm.qti.*`, `com.mediatek.*` e simili).
+segna `never`, compresi i componenti del chip (`com.qualcomm.qti.*`, `com.mediatek.*` e simili).
 
 **Allerte di emergenza.** In Italia IT-alert arriva tramite cell broadcast
-(`com.android.cellbroadcastreceiver` e simili). Sono tra le `mai`: non spegnerle.
+(`com.android.cellbroadcastreceiver` e simili). Sono tra le `never`: non spegnerle.
 
 ### 3. Le app predefinite si cambiano prima di spegnerle
 
 L'app che oggi fa da Home, Telefono, SMS, browser, assistente o wallet, e la tastiera in uso,
-sono `mai` per questo telefono finché restano predefinite. Se vuoi spegnere, per esempio, i
+sono `never` per questo telefono finché restano predefinite. Se vuoi spegnere, per esempio, i
 Messaggi Samsung, prima scegli Google Messaggi come app SMS nelle Impostazioni, poi rilancia
 `candidates.sh`.
 
@@ -60,7 +60,7 @@ adb shell dumpsys package com.esempio.app | grep -m1 pkgFlags
 # pkgFlags=[ SYSTEM HAS_CODE PERSISTENT ... ]
 ```
 
-`candidates.sh` le segna `mai`.
+`candidates.sh` le segna `never`.
 
 ### 5. Non spegnere l'app che ha salvato il Wi-Fi
 
@@ -71,19 +71,19 @@ sistema, ma a volte è un'app di configurazione o di backup:
 adb shell "dumpsys wifi | grep -o 'cname=[^ ]*' | sort -u"
 ```
 
-`candidates.sh` le segna `mai`.
+`candidates.sh` le segna `never`.
 
 ### 6. Amministratori, telefoni aziendali e in finanziamento
 
 Le app con permessi di amministratore (Trova dispositivo, gestione aziendale, Knox Guard sui
-Samsung in finanziamento) sono `mai`. Su un telefono aziendale gestito, non toccare niente
+Samsung in finanziamento) sono `never`. Su un telefono aziendale gestito, non toccare niente
 che riguardi la gestione: lo segnala `info.sh`.
 
 ### 7. Notifiche, sveglie e pagamenti sono i primi a rompersi
 
 - Le notifiche push passano da Google Play Services, e sugli Xiaomi anche da
-  `com.xiaomi.xmsf`. Sono `mai`.
-- Le sveglie stanno nell'app Orologio: è `serve`, ma se la spegni non suonano.
+  `com.xiaomi.xmsf`. Sono `never`.
+- Le sveglie stanno nell'app Orologio: è `useful`, ma se la spegni non suonano.
 - I pagamenti contactless e molte app bancarie dipendono da Play Services, NFC e dal wallet.
   Dopo ogni gruppo prova un pagamento o almeno apri l'app della banca.
 
@@ -96,7 +96,7 @@ adb shell dumpsys package <app> | grep -E 'versionName|firstInstallTime'
 adb shell cmd package resolve-activity --brief <app>
 ```
 
-Se resta `dubbio`, lasciala accesa. Un telefono un po' più lento è meglio di un telefono che
+Se resta `unknown`, lasciala accesa. Un telefono un po' più lento è meglio di un telefono che
 non funziona.
 
 ## A gruppi, con un riavvio
@@ -130,7 +130,7 @@ Gli aggiornamenti a volte riaccendono app spente. `sh check.sh` lo controlla e
 
 Le liste dentro `lib.sh` sono prudenti e ricavate in buona parte dal livello "consigliato" di
 [Universal Android Debloater Next Generation](https://github.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation),
-che ha descrizioni e livelli di rischio per migliaia di pacchetti. Se un'app è `dubbio`,
+che ha descrizioni e livelli di rischio per migliaia di pacchetti. Se un'app è `unknown`,
 cercala lì prima di decidere.
 
 ### Di solito via, se non le usi

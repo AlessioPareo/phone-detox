@@ -1,81 +1,88 @@
 #!/bin/sh
-# Identifica con precisione il telefono collegato: nome commerciale, codice modello, variante,
-# versione del sistema, chip e regione. Non cambia niente sul telefono.
+# Identifies the connected phone precisely: marketing name, model number, variant, system
+# version, chip and region. Changes nothing on the phone.
 #
-#   sh identify.sh [telefono]                      scheda leggibile
-#   sh identify.sh [telefono] --kv                 righe CHIAVE=valore (per Claude o altri script)
-#   sh identify.sh [telefono] --conferma "Nome"    salva il nome che leggi in Impostazioni > Info telefono
+#   sh identify.sh [phone]                     readable card
+#   sh identify.sh [phone] --kv                KEY=value lines (for Claude and other programs)
+#   sh identify.sh [phone] --confirm "Name"    saves the name you read in Settings > About phone
 #
-# Il nome commerciale non è scritto sempre nello stesso posto: lo script prova tutte le
-# proprietà note e dice quanto è affidabile il risultato. Se non è "alta" o "confermato",
-# confrontalo con Impostazioni > Info telefono e salvalo con --conferma.
+# The marketing name isn't always stored in the same place: the script tries every known
+# property and says how reliable the result is. If it isn't "high" or "confirmed", compare it
+# with Settings > About phone and save it with --confirm.
 set -e
 . "$(dirname "$0")/lib.sh"
 
 TARGET=
 if is_target "$1"; then TARGET=$1; shift; fi
-MODE=scheda; CONFIRM=
+MODE=card; CONFIRM=
 while [ $# -gt 0 ]; do
   case "$1" in
     --kv) MODE=kv; shift ;;
-    --conferma) MODE=conferma; CONFIRM=$2; shift 2 || { echo "Manca il nome dopo --conferma." >&2; exit 2; } ;;
-    *) echo "Opzione sconosciuta: $1" >&2; exit 2 ;;
+    --confirm)
+      MODE=confirm; CONFIRM=$2
+      shift 2 || { say "Manca il nome dopo --confirm." "The name is missing after --confirm." >&2; exit 2; } ;;
+    *) say "Opzione sconosciuta: $1" "Unknown option: $1" >&2; exit 2 ;;
   esac
 done
 connect "$TARGET"
 IDF=$(identity_file)
 
-if [ "$MODE" = conferma ]; then
+if [ "$MODE" = confirm ]; then
   case "$CONFIRM" in ""|*'
-'*) echo "Scrivi il nome tra virgolette, es. --conferma \"Galaxy A54 5G\"." >&2; exit 2 ;; esac
-  { [ -f "$IDF" ] && grep -v '^NOME_CONFERMATO=' "$IDF"; printf 'NOME_CONFERMATO=%s\n' "$CONFIRM"; } > "$IDF.tmp" || true
+'*) say "Scrivi il nome tra virgolette, es. --confirm \"Galaxy A54 5G\"." \
+        "Write the name in quotes, e.g. --confirm \"Galaxy A54 5G\"." >&2; exit 2 ;; esac
+  { [ -f "$IDF" ] && grep -v -e '^CONFIRMED_NAME=' -e '^NOME_CONFERMATO=' "$IDF"; printf 'CONFIRMED_NAME=%s\n' "$CONFIRM"; } > "$IDF.tmp" || true
   mv "$IDF.tmp" "$IDF"
-  echo "Salvato: questo telefono è un $CONFIRM."
+  say "Salvato: questo telefono è un $CONFIRM." "Saved: this phone is a $CONFIRM."
   exit 0
 fi
 
 kv=$(identify)
-# La scheda resta anche sul computer: utile per confrontare prima e dopo un aggiornamento.
-{ printf '%s\n' "$kv"; [ -f "$IDF" ] && grep '^NOME_CONFERMATO=' "$IDF"; } > "$IDF.tmp" || true
+# Keep the card on the computer too: useful to compare before and after an update.
+{ printf '%s\n' "$kv"; [ -f "$IDF" ] && grep -e '^CONFIRMED_NAME=' -e '^NOME_CONFERMATO=' "$IDF"; } > "$IDF.tmp" || true
 mv "$IDF.tmp" "$IDF"
 
 if [ "$MODE" = kv ]; then printf '%s\n' "$kv"; exit 0; fi
 
 v() { printf '%s\n' "$kv" | sed -n "s/^$1=//p"; }
-line() { [ -z "$2" ] || printf '   %-15s %s\n' "$1" "$2"; }
+line() { [ -z "$2" ] || printf '   %-17s %s\n' "$1" "$2"; }
 
-echo "== Il tuo telefono"
+say "== Il tuo telefono" "== Your phone"
 if [ -n "$(v MARKET)" ]; then
   echo "   $(v MAKER) $(v MARKET) ($(v MODEL))"
 else
   echo "   $(v MAKER) $(v MODEL)"
 fi
-line "Certezza" "$(v CONFIDENCE) - $(v SOURCE)"
-line "Codice modello" "$(v MODEL)"
-line "Serie" "$(v SERIES)"
-line "Nome in codice" "$(v DEVICE)"
-line "Marca" "$(v BRAND)"
+line "$(L Certezza Confidence)" "$(v CONFIDENCE) - $(v SOURCE)"
+line "$(L 'Codice modello' 'Model number')" "$(v MODEL)"
+line "$(L Serie Series)" "$(v SERIES)"
+line "$(L 'Nome in codice' Codename)" "$(v DEVICE)"
+line "$(L Marca Brand)" "$(v BRAND)"
 line "Chip" "$(v SOC)"
 r=$(v RAM_MB); [ -z "$r" ] || line "RAM" "$r MB"
-line "Memoria" "$(v STORAGE)"
+line "$(L Memoria Storage)" "$(v STORAGE)"
 
-echo "== Sistema"
+say "== Sistema" "== System"
 line "Android" "$(v ANDROID) (SDK $(v SDK))"
-line "Interfaccia" "$(v SKIN)"
-line "Patch sicurezza" "$(v PATCH)"
+line "$(L Interfaccia Skin)" "$(v SKIN)"
+line "$(L 'Patch sicurezza' 'Security patch')" "$(v PATCH)"
 line "Build" "$(v BUILD)"
-line "Regione/CSC" "$(v REGION)"
-line "Operatore SIM" "$(v CARRIER)"
+line "$(L Regione/CSC Region/CSC)" "$(v REGION)"
+line "$(L 'Operatore SIM' 'SIM carrier')" "$(v CARRIER)"
 
-echo "== Per cercarlo online"
+say "== Per cercarlo online" "== To look it up online"
 echo "   \"$(v QUERY)\" debloat"
 
 case "$(v CONFIDENCE)" in
-  alta|confermato) ;;
+  high|confirmed) ;;
   *)
-    echo "== Da confermare"
-    echo "   Il nome commerciale non è certo. Sul telefono apri Impostazioni > Info telefono"
-    echo "   (su Samsung: Info telefono, in alto) e controlla nome e numero di modello."
-    echo "   Il numero di modello deve essere $(v MODEL). Poi salva il nome:"
-    echo "     sh identify.sh $TARGET --conferma \"Nome che leggi\"" ;;
+    say "== Da confermare" "== To confirm"
+    say "   Il nome commerciale non è certo. Sul telefono apri Impostazioni > Info telefono" \
+        "   The marketing name isn't certain. On the phone open Settings > About phone"
+    say "   (su Samsung: Info telefono, in alto) e controlla nome e numero di modello." \
+        "   (on Samsung: About phone, at the top) and check the name and model number."
+    say "   Il numero di modello deve essere $(v MODEL). Poi salva il nome:" \
+        "   The model number must be $(v MODEL). Then save the name:"
+    say "     sh identify.sh $TARGET --confirm \"Nome che leggi\"" \
+        "     sh identify.sh $TARGET --confirm \"Name you read\"" ;;
 esac

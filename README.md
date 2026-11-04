@@ -65,10 +65,10 @@ If you close the app halfway, it picks up from where you were.
 ### With Claude Code
 
 Download this repository, open [Claude Code](https://claude.com/claude-code) in its folder
-and type `/pulisci`. Claude reads [CLAUDE.md](CLAUDE.md), which has the procedure and the
+and type `/clean`. Claude reads [CLAUDE.md](CLAUDE.md), which has the procedure and the
 rules. It warns you about the risks, identifies the model, looks up the apps known for that
 phone, proposes groups of apps and waits for your yes on each one. There's also
-`/identifica` (identify) and `/annulla` (undo). [PROMPT.md](PROMPT.md) has the full prompt
+`/identify` and `/undo`. [PROMPT.md](PROMPT.md) has the full prompt
 for Codex, Gemini CLI or Cursor.
 
 Claude in the claude.ai chat can't do this: it runs on Anthropic's servers and can't see your
@@ -78,11 +78,12 @@ phone. You need something that runs on your computer.
 
 The scripts need a POSIX `sh` and `adb` (Mac: `brew install android-platform-tools`; Linux:
 `sudo apt install adb`; Windows: Git Bash plus the
-[SDK Platform Tools](https://developer.android.com/tools/releases/platform-tools)). Their
-messages are in Italian.
+[SDK Platform Tools](https://developer.android.com/tools/releases/platform-tools)). They
+speak Italian or English, following your computer's language; force one with `PD_LANG=it` or
+`PD_LANG=en`.
 
 ```
-sh guida.sh                    # guided wizard: asks questions, does everything
+sh guide.sh                    # guided wizard: asks questions, does everything
 sh identify.sh                 # which phone it is, and how sure
 sh info.sh                     # free memory, default apps, brand warnings
 sh candidates.sh               # every app with a verdict (changes nothing)
@@ -99,11 +100,11 @@ With several devices connected, or over Wi-Fi, put the phone first:
 
 | in the app | in the scripts | meaning |
 | --- | --- | --- |
-| System | `mai` | The phone needs it, or it's a default app, the keyboard in use, a device administrator, or it saved a Wi-Fi network, or Android always keeps it on. **Refused.** |
-| You may need | `serve` | A feature you might use: alarms, payments, Android Auto, accessibility… Off only if you don't use it. |
-| Recommended | `via` | Usually safe to turn off. |
-| Unknown | `dubbio` | Unknown: stays on unless you know what it is (expert mode). |
-| Yours | `tua` | You installed it: uninstall it from Settings if you don't need it. |
+| System | `never` | The phone needs it, or it's a default app, the keyboard in use, a device administrator, or it saved a Wi-Fi network, or Android always keeps it on. **Refused.** |
+| You may need | `useful` | A feature you might use: alarms, payments, Android Auto, accessibility… Off only if you don't use it. |
+| Recommended | `bloat` | Usually safe to turn off. |
+| Unknown | `unknown` | Unknown: stays on unless you know what it is (expert mode). |
+| Yours | `yours` | You installed it: uninstall it from Settings if you don't need it. |
 
 [docs/cleanup.md](docs/cleanup.md) explains the rules behind the verdicts and what to test
 after each group.
@@ -161,8 +162,9 @@ folder. The only download is adb, from Google's official address.
 
 ## For developers
 
-The scripts are POSIX shell with no dependencies besides `adb`. App lists (`mai`, `serve`,
-`via`) and Italian names live in `lib.sh`; English names in `ui/app_names_en.json`.
+The scripts are POSIX shell with no dependencies besides `adb`. App lists (`never`, `useful`,
+`bloat`) and app names in Italian and English live in `lib.sh`. Code, names, comments and
+labels are in English; user-facing messages are in Italian and English (`say` in `lib.sh`).
 
 ```
 sh ci/test.sh       # tests every script and the app on a simulated phone

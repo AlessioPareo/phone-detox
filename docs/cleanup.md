@@ -11,11 +11,11 @@ phone with a verdict and changes nothing:
 
 | verdict | in the app | meaning |
 | --- | --- | --- |
-| `mai` | System | the phone needs it (boot, calls, SMS, network, security) or Android always keeps it on. |
-| `serve` | You may need | provides a feature you might use. Off only if you don't use it. |
-| `via` | Recommended | usually safe to turn off: ads, duplicates, manufacturer apps. |
-| `dubbio` | Unknown | unknown. Stays on until you know what it is. |
-| `tua` | Yours | you installed it: uninstall it normally from Settings. |
+| `never` | System | the phone needs it (boot, calls, SMS, network, security) or Android always keeps it on. |
+| `useful` | You may need | provides a feature you might use. Off only if you don't use it. |
+| `bloat` | Recommended | usually safe to turn off: ads, duplicates, manufacturer apps. |
+| `unknown` | Unknown | unknown. Stays on until you know what it is. |
+| `yours` | Yours | you installed it: uninstall it normally from Settings. |
 
 Then turn apps off in groups with `sh disable.sh <app> <app> ...`, restart and test the phone.
 
@@ -36,17 +36,17 @@ nor tools that delete files from `/system`: that can't be undone.
 
 Boot, home screen, keyboard, Settings, calls, SMS, mobile network, Wi-Fi, Bluetooth, NFC, app
 installation, initial setup. If you turn one of them off you may end up with a phone that
-doesn't start or can't call, and adb is the only way back. `candidates.sh` marks them `mai`,
+doesn't start or can't call, and adb is the only way back. `candidates.sh` marks them `never`,
 including the chip components (`com.qualcomm.qti.*`, `com.mediatek.*` and similar).
 
 **Emergency alerts.** Public alerts (IT-alert in Italy, EU-Alert, Wireless Emergency Alerts)
 arrive through cell broadcast (`com.android.cellbroadcastreceiver` and similar). They're
-`mai`: never turn them off.
+`never`: never turn them off.
 
 ### 3. Change default apps before turning them off
 
 The app that is currently Home, Phone, SMS, browser, assistant or wallet, and the keyboard in
-use, are `mai` for this phone as long as they're the default. If you want to turn off, say,
+use, are `never` for this phone as long as they're the default. If you want to turn off, say,
 Samsung Messages, first pick Google Messages as the SMS app in Settings, then run
 `candidates.sh` again.
 
@@ -63,7 +63,7 @@ adb shell dumpsys package com.example.app | grep -m1 pkgFlags
 # pkgFlags=[ SYSTEM HAS_CODE PERSISTENT ... ]
 ```
 
-`candidates.sh` marks them `mai`.
+`candidates.sh` marks them `never`.
 
 ### 5. Don't turn off the app that saved the Wi-Fi
 
@@ -74,19 +74,19 @@ saved them, but sometimes it's a setup or backup app:
 adb shell "dumpsys wifi | grep -o 'cname=[^ ]*' | sort -u"
 ```
 
-`candidates.sh` marks them `mai`.
+`candidates.sh` marks them `never`.
 
 ### 6. Administrators, work phones and financed phones
 
 Apps with administrator rights (Find my device, work management, Knox Guard on financed
-Samsung phones) are `mai`. On a managed work phone, don't touch anything related to
+Samsung phones) are `never`. On a managed work phone, don't touch anything related to
 management: `info.sh` and the app tell you.
 
 ### 7. Notifications, alarms and payments break first
 
 - Push notifications go through Google Play Services, and on Xiaomi also through
-  `com.xiaomi.xmsf`. They're `mai`.
-- Alarms live in the Clock app: it's `serve`, but if you turn it off they won't ring.
+  `com.xiaomi.xmsf`. They're `never`.
+- Alarms live in the Clock app: it's `useful`, but if you turn it off they won't ring.
 - Contactless payments and many banking apps depend on Play Services, NFC and the wallet.
   After each group try a payment or at least open your banking app.
 
@@ -99,7 +99,7 @@ adb shell dumpsys package <app> | grep -E 'versionName|firstInstallTime'
 adb shell cmd package resolve-activity --brief <app>
 ```
 
-If it stays `dubbio`, leave it on. A slightly slower phone is better than a phone that
+If it stays `unknown`, leave it on. A slightly slower phone is better than a phone that
 doesn't work.
 
 ## In groups, with a restart
@@ -133,7 +133,7 @@ turns them off again (in the app: **Check** on the Done page).
 
 The lists in `lib.sh` are cautious and largely derived from the "recommended" level of
 [Universal Android Debloater Next Generation](https://github.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation),
-which has descriptions and risk levels for thousands of packages. If an app is `dubbio`, look
+which has descriptions and risk levels for thousands of packages. If an app is `unknown`, look
 it up there before deciding.
 
 ### Usually safe to turn off, if you don't use them

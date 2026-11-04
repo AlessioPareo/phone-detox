@@ -70,7 +70,7 @@ pre { white-space: pre-wrap; word-break: break-word; background: var(--chip); pa
 .app .why { font-size: 14px; color: var(--muted); }
 .lock { width: 22px; text-align: center; flex: none; color: var(--muted); }
 .badge { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
-.badge.via { color: var(--ok); } .badge.serve { color: var(--warn); } .badge.mai { color: var(--bad); }
+.badge.bloat { color: var(--ok); } .badge.useful { color: var(--warn); } .badge.never { color: var(--bad); }
 .stats { display: flex; gap: 10px; flex-wrap: wrap; }
 .stat { background: var(--chip); border-radius: 10px; padding: 10px 14px; min-width: 130px; }
 .stat b { display: block; font-size: 23px; }
@@ -84,6 +84,11 @@ pre { white-space: pre-wrap; word-break: break-word; background: var(--chip); pa
   animation: spin 1s linear infinite; margin: 0 auto 14px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 input[type=search] { font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); width: 100%; }
+.lang { display: inline-flex; align-items: center; gap: 6px; }
+.lang select { font: inherit; font-size: 15px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.langpick { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 16px; }
+.langpick button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--muted); }
 .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
 @media (max-width: 560px) { .facts { grid-template-columns: 1fr; } .facts dd { margin-bottom: 6px; } body { font-size: 16px; } }
@@ -93,7 +98,8 @@ input[type=search] { font: inherit; padding: 8px 12px; border: 1px solid var(--l
 <header>
   <div class="wrap">
     <div class="top"><h1>📱 Phone Detox</h1>
-      <button class="link" id="langBtn" onclick="switchLang()"></button>
+      <label class="lang"><span aria-hidden="true">🌐</span><span class="sr" id="langLabel"></span>
+        <select id="langSel" onchange="setLang(this.value)"><option value="en">English</option><option value="it">Italiano</option></select></label>
       <button class="link" id="closeBtn" onclick="askQuit()"></button></div>
     <div class="steps" id="steps"></div>
   </div>
@@ -109,7 +115,7 @@ const TOKEN = "__TOKEN__";
 // Texts. Values may contain HTML (they are ours); {name} parameters are escaped.
 const T = {
 it: {
-  lang_switch: "English", close: "Chiudi",
+  lang_label: "Lingua", close: "Chiudi",
   steps: ["Prima di iniziare", "Collega", "Il tuo telefono", "Le app", "Fine"],
   next: "Avanti", back: "Indietro", ok: "Ok", cancel: "Annulla", details: "Dettagli tecnici", retry: "Riprova",
   // 1
@@ -165,16 +171,16 @@ it: {
   how_title: "Come funziona",
   how_text: "<ol class=\"small\"><li>Spunta fino a <b>10 app</b> (o premi <b>Scegli per me le più sicure</b>).</li><li>Premi <b>Spegni il gruppo</b> in basso.</li><li>Riavvia il telefono e prova che tutto funzioni.</li><li>Ripeti con altre app, oppure premi <b>Ho finito</b>.</li></ol>",
   pick_for_me: "Scegli per me le più sicure",
-  tabs: { via: "Consigliate", serve: "Forse ti servono", tua: "Tue", dubbio: "Sconosciute", mai: "Di sistema", spente: "Già spente" },
+  tabs: { bloat: "Consigliate", useful: "Forse ti servono", yours: "Tue", unknown: "Sconosciute", never: "Di sistema", off: "Già spente" },
   tab_help: {
-    via: "Di solito si possono spegnere: pubblicità, programmi nascosti, doppioni del produttore. <b>Se ne usi una, lasciala accesa.</b>",
-    serve: "Portano una funzione che potresti usare. Spegnile solo se sei sicuro di non usarla (es. Android Auto se non hai un'auto compatibile, Stampa se non stampi dal telefono).",
-    tua: "Le hai installate tu, o sono arrivate con il telefono e si aggiornano dallo store. Il modo normale per toglierle è <b>Impostazioni → App → Disinstalla</b>; qui puoi anche spegnerle.",
-    dubbio: "Non so cosa sono: <b>restano accese</b>. Attiva la modalità esperto solo se sai esattamente cos'è un'app.",
-    mai: "Servono al telefono per accendersi, chiamare, ricevere messaggi, connettersi e restare sicuro. Non si possono spegnere.",
-    spente: "App già spente o tolte. Puoi riaccenderle una per una.",
+    bloat: "Di solito si possono spegnere: pubblicità, programmi nascosti, doppioni del produttore. <b>Se ne usi una, lasciala accesa.</b>",
+    useful: "Portano una funzione che potresti usare. Spegnile solo se sei sicuro di non usarla (es. Android Auto se non hai un'auto compatibile, Stampa se non stampi dal telefono).",
+    yours: "Le hai installate tu, o sono arrivate con il telefono e si aggiornano dallo store. Il modo normale per toglierle è <b>Impostazioni → App → Disinstalla</b>; qui puoi anche spegnerle.",
+    unknown: "Non so cosa sono: <b>restano accese</b>. Attiva la modalità esperto solo se sai esattamente cos'è un'app.",
+    never: "Servono al telefono per accendersi, chiamare, ricevere messaggi, connettersi e restare sicuro. Non si possono spegnere.",
+    off: "App già spente o tolte. Puoi riaccenderle una per una.",
   },
-  badges: { via: "consigliata", serve: "forse ti serve", tua: "tua", dubbio: "sconosciuta", mai: "di sistema" },
+  badges: { bloat: "consigliata", useful: "forse ti serve", yours: "tua", unknown: "sconosciuta", never: "di sistema" },
   expert: "Modalità esperto: so cos'è l'app che voglio spegnere (l'ho verificato, per esempio su Universal Android Debloater).",
   search: "Cerca un'app", none_here: "Nessuna app qui.",
   st_off: "spenta", st_removed: "tolta", turn_on: "Riaccendi",
@@ -247,7 +253,7 @@ it: {
   },
 },
 en: {
-  lang_switch: "Italiano", close: "Close",
+  lang_label: "Language", close: "Close",
   steps: ["Before you start", "Connect", "Your phone", "Apps", "Done"],
   next: "Next", back: "Back", ok: "OK", cancel: "Cancel", details: "Technical details", retry: "Try again",
   start_title: "Before you start",
@@ -299,16 +305,16 @@ en: {
   how_title: "How it works",
   how_text: "<ol class=\"small\"><li>Tick up to <b>10 apps</b> (or press <b>Choose the safest for me</b>).</li><li>Press <b>Turn off the group</b> at the bottom.</li><li>Restart the phone and check everything works.</li><li>Repeat with other apps, or press <b>I'm done</b>.</li></ol>",
   pick_for_me: "Choose the safest for me",
-  tabs: { via: "Recommended", serve: "You may need", tua: "Yours", dubbio: "Unknown", mai: "System", spente: "Already off" },
+  tabs: { bloat: "Recommended", useful: "You may need", yours: "Yours", unknown: "Unknown", never: "System", off: "Already off" },
   tab_help: {
-    via: "Usually safe to turn off: ads, hidden programs, manufacturer duplicates. <b>If you use one, leave it on.</b>",
-    serve: "They provide a feature you might use. Turn them off only if you're sure you don't (e.g. Android Auto without a compatible car, Printing if you never print from the phone).",
-    tua: "You installed them, or they came with the phone and update from the store. The normal way to remove them is <b>Settings → Apps → Uninstall</b>; here you can also turn them off.",
-    dubbio: "I don't know what they are: <b>they stay on</b>. Turn on expert mode only if you know exactly what an app is.",
-    mai: "The phone needs them to start, call, receive messages, connect and stay secure. They can't be turned off.",
-    spente: "Apps already turned off or removed. You can turn them back on one by one.",
+    bloat: "Usually safe to turn off: ads, hidden programs, manufacturer duplicates. <b>If you use one, leave it on.</b>",
+    useful: "They provide a feature you might use. Turn them off only if you're sure you don't (e.g. Android Auto without a compatible car, Printing if you never print from the phone).",
+    yours: "You installed them, or they came with the phone and update from the store. The normal way to remove them is <b>Settings → Apps → Uninstall</b>; here you can also turn them off.",
+    unknown: "I don't know what they are: <b>they stay on</b>. Turn on expert mode only if you know exactly what an app is.",
+    never: "The phone needs them to start, call, receive messages, connect and stay secure. They can't be turned off.",
+    off: "Apps already turned off or removed. You can turn them back on one by one.",
   },
-  badges: { via: "recommended", serve: "you may need it", tua: "yours", dubbio: "unknown", mai: "system" },
+  badges: { bloat: "recommended", useful: "you may need it", yours: "yours", unknown: "unknown", never: "system" },
   expert: "Expert mode: I know what the app I want to turn off is (I checked, for example on Universal Android Debloater).",
   search: "Search an app", none_here: "No apps here.",
   st_off: "off", st_removed: "removed", turn_on: "Turn on",
@@ -391,7 +397,7 @@ const SAFE_ORDER = ["com.miui.msa.global", "com.miui.analytics", "com.miui.daemo
 const S = {
   lang: "en", step: 0, env: null, devices: null, serial: null, kv: null, idForm: false, idError: "",
   infoStart: null, infoEnd: null, apps: null, selected: new Set(),
-  tab: "via", search: "", expert: false, pending: null, groups: [], appsError: null,
+  tab: "bloat", search: "", expert: false, pending: null, groups: [], appsError: null,
 };
 try { S.lang = localStorage.getItem("pd:lang") || ""; } catch (e) {}
 if (!T[S.lang]) S.lang = (navigator.language || "").toLowerCase().startsWith("it") ? "it" : "en";
@@ -404,7 +410,7 @@ function t(key, params) {
   if (typeof v === "string" && params) v = v.replace(/\{(\w+)\}/g, (m, k) => k in params ? esc(params[k]) : m);
   return v;
 }
-function switchLang() { S.lang = S.lang === "it" ? "en" : "it"; try { localStorage.setItem("pd:lang", S.lang); } catch (e) {} render(); }
+function setLang(lang) { if (!T[lang]) return; S.lang = lang; try { localStorage.setItem("pd:lang", lang); } catch (e) {} render(); }
 
 function save() {
   if (!S.serial) return;
@@ -418,7 +424,7 @@ class ApiError extends Error { constructor(code, params, detail) { super(code); 
 async function api(name, data = {}) {
   let r;
   try {
-    r = await fetch("/api/" + name, { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify(data) });
+    r = await fetch("/api/" + name, { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify({ ...data, lang: S.lang }) });
   } catch (e) { throw new ApiError("offline"); }
   let j; try { j = await r.json(); } catch (e) { throw new ApiError("offline"); }
   if (!r.ok) throw new ApiError(j.error || "unexpected", j.params, j.detail);
@@ -447,7 +453,8 @@ function go(step) { S.step = step; render(); window.scrollTo(0, 0); onEnter(); }
 // Views
 function render() {
   document.documentElement.lang = S.lang;
-  $("langBtn").textContent = t("lang_switch");
+  $("langSel").value = S.lang;
+  $("langLabel").textContent = t("lang_label");
   $("closeBtn").textContent = t("close");
   $("steps").innerHTML = t("steps").map((s, i) => `<span class="step ${i === S.step ? "on" : i < S.step ? "done" : ""}">${i < S.step ? "✓ " : (i + 1) + ". "}${s}</span>`).join("");
   $("view").innerHTML = [vStart, vConnect, vPhone, vApps, vEnd][S.step]();
@@ -456,6 +463,9 @@ function render() {
 
 function vStart() {
   return `<div class="card">
+    <div class="langpick" role="group" aria-label="Language / Lingua">
+      <button class="${S.lang === "en" ? "on" : ""}" onclick="setLang('en')">🇬🇧 English</button>
+      <button class="${S.lang === "it" ? "on" : ""}" onclick="setLang('it')">🇮🇹 Italiano</button></div>
     <h2>${t("start_title")}</h2>
     <p>${t("start_intro")}</p>
     <p>${t("start_need")}</p>
@@ -519,10 +529,10 @@ function vPhone() {
     ["f_storage", k.STORAGE], ["f_ram", k.RAM_MB ? k.RAM_MB + " MB" : ""], ["f_carrier", k.CARRIER]]
     .filter(f => f[1]).map(f => `<dt>${t(f[0])}</dt><dd>${esc(f[1])}</dd>`).join("");
   let body;
-  if (k.CONFIDENCE === "confermato" && !S.idForm) {
+  if (k.CONFIDENCE === "confirmed" && !S.idForm) {
     body = `<div class="box ok">${t("phone_confirmed", { name: k.MARKET })}</div>
       <div class="row"><button class="primary big" onclick="go(3)">${t("next")}</button><button onclick="S.idForm=true;render()">${t("phone_wrong")}</button></div>`;
-  } else if (k.CONFIDENCE === "alta" && !S.idForm) {
+  } else if (k.CONFIDENCE === "high" && !S.idForm) {
     body = `<p>${t("phone_check", { name: k.MARKET, model: k.MODEL })}</p>
       <div class="row"><button class="primary big" onclick="confirmName(S.kv.MARKET)">${t("phone_yes")}</button><button onclick="S.idForm=true;render()">${t("phone_no")}</button></div>`;
   } else {
@@ -537,15 +547,15 @@ function vPhone() {
     <div class="row"><button onclick="go(1)">${t("back")}</button></div></div>`;
 }
 
-const TAB_IDS = ["via", "serve", "tua", "dubbio", "mai", "spente"];
-const inTab = (a, id) => id === "spente" ? a.state !== "on" : (a.verdict === id && a.state === "on");
+const TAB_IDS = ["bloat", "useful", "yours", "unknown", "never", "off"];
+const inTab = (a, id) => id === "off" ? a.state !== "on" : (a.verdict === id && a.state === "on");
 
 function vApps() {
   const i = S.infoStart;
-  const nVia = S.apps ? S.apps.filter(a => inTab(a, "via")).length : "…";
+  const nBloat = S.apps ? S.apps.filter(a => inTab(a, "bloat")).length : "…";
   const head = `<div class="card"><h2>${t("apps_title")}</h2>
     ${i ? `<div class="stats"><div class="stat"><span class="small muted">${t("ram_now")}</span><b>${i.ram_free ?? "?"} MB</b></div>
-      <div class="stat"><span class="small muted">${t("recommended")}</span><b>${nVia}</b></div>
+      <div class="stat"><span class="small muted">${t("recommended")}</span><b>${nBloat}</b></div>
       <div class="stat"><span class="small muted">${t("groups_done")}</span><b>${S.groups.filter(g => g.ok).length}</b></div></div>` : ""}
     ${i && i.managed ? `<div class="box bad">${t("managed")}</div>` : ""}
     ${!S.pending ? `<details ${S.groups.length ? "" : "open"}><summary>${t("how_title")}</summary>${t("how_text")}</details>` : ""}
@@ -563,17 +573,17 @@ function vApps() {
     if (a.state !== "on")
       return `<div class="app"><span class="lock">⏻</span>${nm}<span class="badge">${t(a.state === "off" ? "st_off" : "st_removed")}</span>
         <button onclick="restoreOne('${esc(a.package)}')">${t("turn_on")}</button></div>`;
-    if (a.verdict === "mai") return `<div class="app"><span class="lock" title="${esc(t("lock_title"))}">🔒</span>${nm}</div>`;
+    if (a.verdict === "never") return `<div class="app"><span class="lock" title="${esc(t("lock_title"))}">🔒</span>${nm}</div>`;
     const full = S.selected.size >= 10 && !S.selected.has(a.package);
-    const why = a.verdict === "dubbio" && !S.expert ? t("why_dubbio") : full ? t("why_full") : "";
+    const why = a.verdict === "unknown" && !S.expert ? t("why_dubbio") : full ? t("why_full") : "";
     return `<label class="app" ${why ? `title="${esc(why)}"` : ""}><input type="checkbox" ${S.selected.has(a.package) ? "checked" : ""} ${why ? "disabled" : ""}
       onchange="toggle('${esc(a.package)}', this.checked)">${nm}<span class="badge ${a.verdict}">${t("badges." + a.verdict)}</span></label>`;
   }).join("") || `<p class="muted">${t("none_here")}</p>`;
   return head + `<div class="card">
     <div class="tabs">${tabs}</div>
     <p class="small">${t("tab_help." + S.tab)}</p>
-    ${S.tab === "via" ? `<div class="row" style="margin:4px 0 12px"><button onclick="pickForMe()">✨ ${t("pick_for_me")}</button></div>` : ""}
-    ${S.tab === "dubbio" ? `<label class="check small"><input type="checkbox" ${S.expert ? "checked" : ""} onchange="S.expert=this.checked;render()"><span>${t("expert")}</span></label>` : ""}
+    ${S.tab === "bloat" ? `<div class="row" style="margin:4px 0 12px"><button onclick="pickForMe()">✨ ${t("pick_for_me")}</button></div>` : ""}
+    ${S.tab === "unknown" ? `<label class="check small"><input type="checkbox" ${S.expert ? "checked" : ""} onchange="S.expert=this.checked;render()"><span>${t("expert")}</span></label>` : ""}
     ${S.selected.size >= 10 ? `<div class="box info">${t("full_box")}</div>` : ""}
     <input type="search" placeholder="${esc(t("search"))}" value="${esc(S.search)}" oninput="S.search=this.value;renderKeepFocus()">
     <div style="margin-top:8px">${rows}</div></div>
@@ -712,14 +722,14 @@ async function loadApps() {
   S.appsError = null; S.apps = null; render();
   try {
     S.apps = (await api("apps", { serial: S.serial })).apps;
-    for (const p of [...S.selected]) { const a = S.apps.find(x => x.package === p); if (!a || a.state !== "on" || a.verdict === "mai") S.selected.delete(p); }
+    for (const p of [...S.selected]) { const a = S.apps.find(x => x.package === p); if (!a || a.state !== "on" || a.verdict === "never") S.selected.delete(p); }
   } catch (e) { S.appsError = e; }
   render();
 }
 function toggle(p, on) { if (on && S.selected.size < 10) S.selected.add(p); else S.selected.delete(p); render(); }
 function pickForMe() {
-  const via = S.apps.filter(a => inTab(a, "via")).map(a => a.package);
-  const order = [...SAFE_ORDER.filter(p => via.includes(p)), ...via.filter(p => !SAFE_ORDER.includes(p))];
+  const bloat = S.apps.filter(a => inTab(a, "bloat")).map(a => a.package);
+  const order = [...SAFE_ORDER.filter(p => bloat.includes(p)), ...bloat.filter(p => !SAFE_ORDER.includes(p))];
   const before = S.selected.size;
   for (const p of order) { if (S.selected.size >= 10) break; S.selected.add(p); }
   if (S.selected.size === before && before < 10) dialog(`<p>${t("nothing_to_pick")}</p>${okBtn()}`);
@@ -727,7 +737,7 @@ function pickForMe() {
 }
 function askDisable() {
   const chosen = [...S.selected].map(p => S.apps.find(x => x.package === p)).filter(Boolean);
-  const risky = chosen.filter(a => a.verdict !== "via").map(appName);
+  const risky = chosen.filter(a => a.verdict !== "bloat").map(appName);
   dialog(`<h2>${t("confirm_title", { n: chosen.length })}</h2>
     <ul>${chosen.map(a => `<li><b>${esc(appName(a))}</b> <span class="badge ${a.verdict}">${t("badges." + a.verdict)}</span></li>`).join("")}</ul>
     ${risky.length ? `<div class="box warn">${t("confirm_warn", { list: risky.join(", ") })}</div>` : ""}
