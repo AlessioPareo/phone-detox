@@ -1,5 +1,7 @@
 # Pulire il telefono senza romperlo
 
+[English](cleanup.md) · **Italiano**
+
 Spegnere le app inutili è una scelta app per app, quindi non è automatica. Questa pagina
 raccoglie le regole che la rendono sicura e reversibile.
 

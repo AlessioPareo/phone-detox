@@ -125,5 +125,9 @@ fabbrica dalla recovery per quel modello.
 
 - Shell POSIX, nessuna dipendenza oltre ad adb. Testi in italiano.
 - Liste delle app, nomi e classificazione: `lib.sh`. Identificazione: `identify()` in `lib.sh`.
+- Interfaccia grafica: `ui/` (Python solo libreria standard, lancia gli script e non chiama mai
+  `pm` direttamente). Si avvia con `start-linux.sh`, `start-mac.command` o `start-windows.bat`. Testi della
+  pagina in italiano e inglese (dizionario `T` in `ui/index.html`); i nomi inglesi delle app in
+  `ui/app_names_en.json`: chi aggiunge un nome in `lib.sh` aggiunge anche quello.
 - Prima di consegnare: `sh ci/test.sh` (telefono simulato) e
   `shellcheck -x --severity=warning -s sh *.sh ci/*.sh ci/fake-adb/adb ci/fake-adb/bin/*`.

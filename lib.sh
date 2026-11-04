@@ -442,6 +442,41 @@ com.miui.player	Mi Music
 com.mi.globalbrowser	Mi Browser
 com.mi.android.globalminusscreen	App Vault (pagina a sinistra)
 com.miui.android.fashiongallery	Carosello sfondi con pubblicità
+com.miui.bugreport	Segnalazione errori Xiaomi
+com.miui.miservice	Servizi e feedback Xiaomi
+com.miui.yellowpage	Pagine gialle Xiaomi (nome delle aziende che chiamano)
+com.xiaomi.glgm	Giochi Xiaomi
+com.miui.cleaner	Pulizia Xiaomi
+com.miui.gallery	Galleria Xiaomi
+com.miui.notes	Note Xiaomi
+com.miui.weather2	Meteo Xiaomi
+com.miui.calculator	Calcolatrice Xiaomi
+com.miui.screenrecorder	Registrazione schermo Xiaomi
+com.android.soundrecorder	Registratore
+com.xiaomi.midrop	ShareMe (Xiaomi)
+cn.wps.xiaomi.abroad.lite	WPS Office (preinstallato Xiaomi)
+com.amazon.appmanager	Installer nascosto di Amazon
+com.android.dreams.basic	Salvaschermo base
+com.android.dreams.phototable	Salvaschermo con le foto
+com.android.wallpaper.livepicker	Sfondi animati
+com.android.bookmarkprovider	Segnalibri del vecchio browser
+com.android.providers.partnerbookmarks	Segnalibri del produttore
+com.android.htmlviewer	Visualizzatore di pagine HTML
+com.android.hotwordenrollment.okgoogle	"Ok Google" con la voce
+com.android.hotwordenrollment.xgoogle	"Ok Google" con la voce
+com.google.android.apps.googleassistant	Assistente Google (scorciatoia)
+com.android.printspooler	Stampa
+com.android.bips	Stampa (stampanti di rete)
+com.google.android.printservice.recommendation	Stampa (suggerimenti di plugin)
+com.android.camera	Fotocamera
+com.android.deskclock	Orologio e sveglie
+com.google.android.apps.maps	Google Maps
+com.google.android.gm	Gmail
+com.google.android.calendar	Google Calendar
+com.google.android.contacts	Contatti Google
+com.google.android.youtube	YouTube
+com.google.android.tts	Sintesi vocale Google
+com.android.chrome	Chrome
 com.heytap.pictorial	Magazine della schermata di blocco
 com.heytap.browser	Browser Oppo/Realme
 com.oplus.games	Games (Oppo/OnePlus)'

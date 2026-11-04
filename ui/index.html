@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone Detox</title>
+<style>
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dfe3ea;
+  --accent: #2563eb; --accent-text: #ffffff; --ok: #15803d; --ok-bg: #e8f6ed;
+  --warn: #a16207; --warn-bg: #fdf6e3; --bad: #b91c1c; --bad-bg: #fdecec; --chip: #eef1f6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12151b; --card: #1b2029; --text: #e6e9ef; --muted: #9aa3b2; --line: #2c3340;
+    --accent: #5b8def; --accent-text: #0b1020; --ok: #4ade80; --ok-bg: #16281d;
+    --warn: #facc15; --warn-bg: #2b2613; --bad: #f87171; --bad-bg: #2d1717; --chip: #252c38;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 17px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+.top { display: flex; align-items: center; gap: 8px; padding: 12px 0; flex-wrap: wrap; }
+.top h1 { font-size: 21px; margin: 0; flex: 1; }
+.steps { display: flex; gap: 6px; padding: 0 0 12px; overflow-x: auto; }
+.step { font-size: 14px; padding: 4px 10px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+.step.on { background: var(--accent); color: var(--accent-text); }
+.step.done { color: var(--ok); }
+main { padding: 20px 0 130px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+h2 { margin: 0 0 12px; font-size: 23px; }
+h3 { margin: 16px 0 8px; font-size: 18px; }
+p { margin: 0 0 10px; }
+ul, ol { margin: 0 0 10px; padding-left: 22px; }
+li { margin-bottom: 5px; }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14px; word-break: break-all; }
+button, .btn { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text);
+  padding: 10px 16px; cursor: pointer; text-decoration: none; display: inline-block; }
+button:hover, .btn:hover { border-color: var(--accent); }
+button.primary, .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+button.big { font-size: 18px; padding: 13px 22px; }
+button.danger { color: var(--bad); border-color: var(--bad); }
+button.link { border: none; background: none; color: var(--accent); padding: 6px; text-decoration: underline; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+.box { border-radius: 10px; padding: 12px 14px; margin: 10px 0; }
+.box.ok { background: var(--ok-bg); } .box.warn { background: var(--warn-bg); } .box.bad { background: var(--bad-bg); }
+.box.info { background: var(--chip); }
+.box > :last-child { margin-bottom: 0; }
+input[type=text] { font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+  color: var(--text); width: 100%; max-width: 360px; }
+label.check { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; cursor: pointer; }
+label.check input { margin-top: 5px; width: 20px; height: 20px; flex: none; }
+details { margin: 10px 0; } summary { cursor: pointer; color: var(--accent); }
+pre { white-space: pre-wrap; word-break: break-word; background: var(--chip); padding: 10px; border-radius: 8px; max-height: 320px; overflow: auto; font-size: 13px; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 10px 0; }
+.facts dt { color: var(--muted); } .facts dd { margin: 0; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 10px; }
+.tab { padding: 6px 12px; font-size: 15px; border-radius: 999px; }
+.tab.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.app { display: flex; gap: 12px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+.app:last-child { border-bottom: none; }
+.app input { width: 22px; height: 22px; flex: none; }
+.app .what { flex: 1; min-width: 0; }
+.app .pkg { font-size: 12px; color: var(--muted); word-break: break-all; }
+.app .why { font-size: 14px; color: var(--muted); }
+.lock { width: 22px; text-align: center; flex: none; color: var(--muted); }
+.badge { font-size: 13px; padding: 2px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+.badge.via { color: var(--ok); } .badge.serve { color: var(--warn); } .badge.mai { color: var(--bad); }
+.stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.stat { background: var(--chip); border-radius: 10px; padding: 10px 14px; min-width: 130px; }
+.stat b { display: block; font-size: 23px; }
+.bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line); z-index: 6;
+  box-shadow: 0 -4px 16px rgba(0,0,0,.06); }
+.bar .wrap { display: flex; gap: 10px; align-items: center; padding: 12px 16px; flex-wrap: wrap; }
+.bar .count { flex: 1; min-width: 180px; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 10; padding: 16px; }
+.dialog { background: var(--card); border-radius: 14px; padding: 22px; max-width: 580px; width: 100%; max-height: 90vh; overflow: auto; }
+.spinner { width: 34px; height: 34px; border: 4px solid var(--line); border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 1s linear infinite; margin: 0 auto 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+input[type=search] { font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--text); width: 100%; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--muted); }
+.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+@media (max-width: 560px) { .facts { grid-template-columns: 1fr; } .facts dd { margin-bottom: 6px; } body { font-size: 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top"><h1>📱 Phone Detox</h1>
+      <button class="link" id="langBtn" onclick="switchLang()"></button>
+      <button class="link" id="closeBtn" onclick="askQuit()"></button></div>
+    <div class="steps" id="steps"></div>
+  </div>
+</header>
+<main><div class="wrap" id="view"></div></main>
+<div id="bar"></div>
+<div id="modal"></div>
+
+<script>
+const TOKEN = "__TOKEN__";
+
+// ---------------------------------------------------------------------------------------------
+// Texts. Values may contain HTML (they are ours); {name} parameters are escaped.
+const T = {
+it: {
+  lang_switch: "English", close: "Chiudi",
+  steps: ["Prima di iniziare", "Collega", "Il tuo telefono", "Le app", "Fine"],
+  next: "Avanti", back: "Indietro", ok: "Ok", cancel: "Annulla", details: "Dettagli tecnici", retry: "Riprova",
+  // 1
+  start_title: "Prima di iniziare",
+  start_intro: "Phone Detox spegne le app inutili del tuo telefono Android: pubblicità, programmi nascosti, doppioni del produttore. Il telefono diventa più leggero e ti disturba meno.",
+  start_need: "<b>Ti serve:</b> il telefono, un cavo USB e circa mezz'ora.",
+  start_risk: "<p><b>C'è qualche rischio.</b> Spegnere app di sistema a volte fa smettere di funzionare qualcosa e, nel caso peggiore (raro), il telefono può non ripartire bene.</p><p>Per questo si va <b>a piccoli gruppi</b> (massimo 10 app), si <b>riavvia e si prova</b> il telefono dopo ogni gruppo, e tutto si può <b>riaccendere</b> con un pulsante. Le app non vengono cancellate.</p>",
+  start_backup: "<b>Fai prima un backup</b> di foto, chat (es. il backup di WhatsApp) e contatti.",
+  start_ack: "Ho capito i rischi e ho fatto il backup (o scelgo di andare avanti senza).",
+  // 2
+  conn_title: "Collega il telefono",
+  conn_checking: "Controllo il computer…", conn_searching: "Cerco il telefono…",
+  conn_no_sh: "<p><b>Manca un componente sul computer: Git for Windows.</b> Phone Detox lo usa per far girare i suoi script.</p><ol><li>Apri la pagina di download con il pulsante qui sotto e scarica Git for Windows.</li><li>Installalo lasciando le opzioni come sono.</li><li>Chiudi Phone Detox (anche la finestra nera) e riaprilo.</li></ol>",
+  conn_no_sh_btn: "Scarica Git for Windows",
+  conn_no_adb: "<p><b>Manca adb</b>, il programma ufficiale di Google che parla con il telefono. Lo installo io: sono circa 10 MB.</p>",
+  conn_install_adb: "Installa adb per me", conn_installing: "Scarico adb dal sito di Google…",
+  conn_adb_manual: "Preferisci installarlo tu?",
+  conn_adb_linux: "Apri un terminale e scrivi <span class=\"mono\">sudo apt install adb</span> (Fedora: <span class=\"mono\">sudo dnf install android-tools</span>, Arch: <span class=\"mono\">sudo pacman -S android-tools</span>).",
+  conn_adb_mac: "Apri il Terminale e scrivi <span class=\"mono\">brew install android-platform-tools</span> (serve Homebrew, brew.sh).",
+  conn_adb_windows: "Scarica gli <b>SDK Platform Tools</b> per Windows dal sito di Android e copia la cartella <b>platform-tools</b> dentro la cartella di Phone Detox:",
+  conn_recheck: "Ricontrolla",
+  conn_none: "<b>Nessun telefono collegato.</b> Segui i passi qui sotto: questa pagina si aggiorna da sola.",
+  conn_debug: "<ol><li>Sul telefono apri <b>Impostazioni → Info telefono</b> e tocca <b>7 volte</b> su <b>Numero build</b>, finché compare \"Ora sei uno sviluppatore\".<ul class=\"small\"><li>Samsung: Info telefono → Informazioni software → Numero build</li><li>Xiaomi, Redmi, POCO: tocca su Versione MIUI / Versione HyperOS</li><li>OnePlus, Oppo, Realme: Info dispositivo → Versione → Numero build</li></ul></li><li>Torna indietro, apri <b>Opzioni sviluppatore</b> (a volte è in Impostazioni → Sistema, o Impostazioni aggiuntive) e attiva <b>Debug USB</b>. Su Xiaomi attiva anche <b>Debug USB (impostazioni di sicurezza)</b>.</li><li>Collega il cavo. Usa un <b>cavo dati</b>: alcuni cavi caricano soltanto. Se il telefono chiede cosa fare con l'USB, scegli <b>Trasferimento file</b>.</li><li>Sul telefono compare \"Consentire il debug USB?\": spunta <b>Consenti sempre</b> e tocca <b>Consenti</b>.</li></ol>",
+  conn_ok: "Collegato", conn_wait: "Aspetta il tuo permesso", conn_noperm: "Il computer non ha il permesso", conn_bad: "Non risponde ({state})",
+  conn_unauth: "<b>Sblocca il telefono</b> e guarda lo schermo: c'è la finestra \"Consentire il debug USB?\". Spunta <b>Consenti sempre</b> e tocca <b>Consenti</b>.<p class=\"small\" style=\"margin:6px 0 0\">Non c'è la finestra? Stacca e riattacca il cavo con il telefono sbloccato, oppure in Opzioni sviluppatore spegni e riaccendi Debug USB.</p>",
+  conn_noperm_help: "<b>Linux non lascia usare il telefono a questo utente.</b> Apri un terminale, scrivi <span class=\"mono\">sudo apt install adb</span> (installa anche i permessi per i telefoni), poi stacca e riattacca il cavo.",
+  conn_many: "Ci sono più dispositivi: scegli quello da pulire.",
+  conn_phone: "Telefono",
+  wifi_title: "Senza cavo (Wi-Fi, Android 11 o più recente)",
+  wifi_note: "Il cavo è più comodo: dopo ogni gruppo si riavvia, e senza cavo bisogna ricollegarsi ogni volta.",
+  wifi_steps: "<li>Telefono e computer sulla stessa rete Wi-Fi.</li><li>In <b>Opzioni sviluppatore → Debug wireless</b> attivalo e tocca <b>Associa dispositivo con codice di associazione</b>.</li><li>Scrivi qui indirizzo e codice che vedi:</li>",
+  wifi_code: "Codice (6 cifre)", wifi_pair: "Associa",
+  wifi_step4: "4. Poi scrivi l'indirizzo mostrato in alto nella schermata Debug wireless (la porta è diversa):",
+  wifi_connect: "Collega", wifi_pairing: "Associo il telefono…", wifi_connecting: "Mi collego al telefono…",
+  wifi_paired: "Associato", wifi_paired_text: "Ora scrivi l'indirizzo per collegarti (punto 4).",
+  wifi_failed: "Non ha funzionato", wifi_failed_text: "Controlla indirizzo e codice e riprova.",
+  // 3
+  phone_title: "Il tuo telefono", phone_reading: "Leggo il telefono…",
+  f_name: "Nome", f_model: "Codice modello", f_system: "Sistema", f_storage: "Memoria", f_ram: "RAM", f_carrier: "Operatore",
+  unknown: "non so",
+  phone_confirmed: "Hai già confermato che è un <b>{name}</b>.",
+  phone_check: "Per sicurezza controlla: sul telefono apri <b>Impostazioni → Info telefono</b>. C'è scritto <b>{name}</b>, con modello <b>{model}</b>?",
+  phone_yes: "Sì, è giusto", phone_no: "No, c'è scritto altro", phone_wrong: "Non è giusto",
+  phone_unsure: "Non sono sicuro del nome. Sul telefono apri <b>Impostazioni → Info telefono</b> (su Samsung è in alto) e scrivi qui cosa leggi.",
+  phone_name: "Nome del telefono", phone_model: "Numero di modello", phone_confirm: "Conferma",
+  phone_both: "Scrivi sia il nome sia il numero di modello.",
+  phone_mismatch: "Il numero che leggi ({typed}) non coincide con quello del telefono collegato ({model}). Forse è collegato un altro dispositivo: controlla e riprova.",
+  saving: "Salvo…",
+  // 4
+  apps_title: "Le app", ram_now: "RAM libera ora", recommended: "Consigliate", groups_done: "Gruppi fatti",
+  managed: "Questo telefono è <b>gestito</b> (aziendale o da un'app di gestione): non toccare le app di gestione.",
+  apps_reading: "Leggo le app del telefono… (può volerci un minuto)",
+  how_title: "Come funziona",
+  how_text: "<ol class=\"small\"><li>Spunta fino a <b>10 app</b> (o premi <b>Scegli per me le più sicure</b>).</li><li>Premi <b>Spegni il gruppo</b> in basso.</li><li>Riavvia il telefono e prova che tutto funzioni.</li><li>Ripeti con altre app, oppure premi <b>Ho finito</b>.</li></ol>",
+  pick_for_me: "Scegli per me le più sicure",
+  tabs: { via: "Consigliate", serve: "Forse ti servono", tua: "Tue", dubbio: "Sconosciute", mai: "Di sistema", spente: "Già spente" },
+  tab_help: {
+    via: "Di solito si possono spegnere: pubblicità, programmi nascosti, doppioni del produttore. <b>Se ne usi una, lasciala accesa.</b>",
+    serve: "Portano una funzione che potresti usare. Spegnile solo se sei sicuro di non usarla (es. Android Auto se non hai un'auto compatibile, Stampa se non stampi dal telefono).",
+    tua: "Le hai installate tu, o sono arrivate con il telefono e si aggiornano dallo store. Il modo normale per toglierle è <b>Impostazioni → App → Disinstalla</b>; qui puoi anche spegnerle.",
+    dubbio: "Non so cosa sono: <b>restano accese</b>. Attiva la modalità esperto solo se sai esattamente cos'è un'app.",
+    mai: "Servono al telefono per accendersi, chiamare, ricevere messaggi, connettersi e restare sicuro. Non si possono spegnere.",
+    spente: "App già spente o tolte. Puoi riaccenderle una per una.",
+  },
+  badges: { via: "consigliata", serve: "forse ti serve", tua: "tua", dubbio: "sconosciuta", mai: "di sistema" },
+  expert: "Modalità esperto: so cos'è l'app che voglio spegnere (l'ho verificato, per esempio su Universal Android Debloater).",
+  search: "Cerca un'app", none_here: "Nessuna app qui.",
+  st_off: "spenta", st_removed: "tolta", turn_on: "Riaccendi",
+  lock_title: "Non si spegne", why_dubbio: "Sconosciuta: attiva la modalità esperto per sceglierla",
+  why_full: "Hai già 10 app nel gruppo: spegni questo gruppo o togli una spunta",
+  full_box: "<b>Hai scelto 10 app: è il massimo per un gruppo.</b> Le altre sono bloccate finché non spegni questo gruppo (pulsante <b>Spegni il gruppo</b> in basso) o togli una spunta. Dopo il riavvio e la prova potrai sceglierne altre.",
+  done_title: "Hai finito?", done_text: "Quando hai spento quello che volevi, vai alla fine per il riepilogo.", done_btn: "Ho finito",
+  bar_count: "<b>{n}/10</b> app nel gruppo", clear: "Svuota", turn_off_group: "Spegni il gruppo",
+  nothing_to_pick: "Non ci sono altre app consigliate da scegliere.",
+  confirm_title: "Spengo queste {n} app?",
+  confirm_warn: "<b>Attenzione:</b> queste potresti usarle: {list}. Se le usi, annulla e togli la spunta.",
+  confirm_text: "Dopo riavvieremo il telefono e proverai che tutto funziona. Si possono riaccendere quando vuoi.",
+  confirm_yes: "Sì, spegnile", turning_off: "Spengo le app…",
+  nothing_changed: "Non ho cambiato niente", nothing_changed_text: "Le app erano già spente, oppure il programma le ha rifiutate per sicurezza.",
+  failed_title: "Alcune app non si sono spente", failed_text: "Il telefono non permette di spegnere queste app:",
+  failed_offer: "Posso <b>toglierle per il tuo utente</b>: spariscono per te, ma restano nel telefono e il pulsante Riaccendi le rimette, senza reset.",
+  failed_remove: "Toglile per l'utente", failed_leave: "Lasciale stare", removing: "Tolgo le app per l'utente…",
+  failed_again: "Non ci sono riuscito",
+  reboot_title: "Ora riavvia il telefono", reboot_text: "Ho spento {n} app: {list}.", reboot_why: "Il riavvio serve: solo dopo si vede davvero se tutto funziona.",
+  reboot_btn: "Riavvia il telefono", reboot_self: "L'ho riavviato io",
+  rebooting: "Il telefono si sta riavviando. Ci vuole circa un minuto: non staccare il cavo.",
+  reboot_slow_title: "Quasi", reboot_slow: "Il telefono ci mette tanto a ripartire. Aspetta che compaia la schermata di blocco, poi continua.",
+  test_title: "Prova il telefono", test_intro: "Sblocca il telefono e prova queste cose (quelle che usi):",
+  tests: ["Una chiamata (fai e ricevi)", "Un SMS", "Internet con i dati mobili (Wi-Fi spento)", "Il Wi-Fi", "Il Bluetooth, se lo usi", "Una notifica (es. un messaggio WhatsApp)", "La fotocamera", "Una sveglia di prova", "L'app della banca o un pagamento contactless, se li usi"],
+  test_ok: "Funziona tutto: avanti", test_bad: "Qualcosa non va: riaccendi questo gruppo", test_group: "App di questo gruppo: {list}",
+  undoing_group: "Riaccendo le app di questo gruppo…",
+  group_back: "Gruppo riacceso", group_partial: "Non tutte sono tornate", group_back_text: "Ora riavvia il telefono perché tutto riparta come prima.",
+  reboot_later: "Lo riavvio io", turning_on: "Riaccendo…",
+  restored: "Riaccesa", restored_text: "{name} è di nuovo accesa.",
+  not_restored: "Non l'ho riaccesa", not_restored_text: "Questa app non era stata spenta con Phone Detox. Per riaccenderla usa il Soccorso nella pagina Fine.",
+  // 5
+  end_title: "Fatto!", ram_before: "RAM libera prima", apps_off: "App spente",
+  ram_note: "Anche il riavvio libera memoria: il confronto è indicativo.",
+  end_list: "Le app che hai spento",
+  end_debug: "<b>Ultima cosa importante:</b> sul telefono apri <b>Impostazioni → Opzioni sviluppatore</b> e spegni <b>Debug USB</b> (e <b>Debug wireless</b> se l'hai usato). Lasciarli accesi non serve e non è sicuro.",
+  later_title: "Più avanti",
+  later_list: "La lista di quello che hai spento è salvata sul computer (cartella {path}) e anche sul telefono.",
+  later_update: "Gli aggiornamenti di sistema a volte riaccendono le app. Dopo un aggiornamento riapri Phone Detox e usa questi pulsanti:",
+  check: "Controlla", check_fix: "Rispegni quelle tornate accese", checking: "Controllo…", fixing: "Rispengo…",
+  check_ok: "Tutto a posto", check_changed: "{n} app si sono riaccese. Premi \"Rispegni quelle tornate accese\".", check_fixed: "Ho rispento {n} app.", check_empty: "Non c'è niente da controllare: con Phone Detox non hai ancora spento nulla su questo telefono.",
+  trouble: "Se qualcosa non va",
+  undo_all: "Riaccendi tutto quello spento con Phone Detox", rescue: "Soccorso: riaccendi ogni app spenta",
+  undo_all_text: "Riaccendo tutte le app spente con Phone Detox su questo telefono.",
+  rescue_text: "Riaccendo <b>ogni</b> app spenta o tolta sul telefono, anche quelle spente prima di Phone Detox o da altri programmi.",
+  undo_yes: "Sì, riaccendi", undone: "Fatto", undone_text: "Ora riavvia il telefono.",
+  back_to_apps: "Torna alle app", quit: "Chiudi Phone Detox",
+  quit_q: "Vuoi chiudere Phone Detox?", quit_text: "Se sei a metà di un gruppo, riaprendolo riprendi da lì.",
+  closed_title: "Phone Detox è chiuso", closed_text: "Puoi chiudere questa scheda.", closed_debug: "Ricordati di spegnere <b>Debug USB</b> in Opzioni sviluppatore.",
+  // errors
+  err_title: "Qualcosa non è andato",
+  err: {
+    no_sh: "Manca Git for Windows: torna al passo Collega.",
+    no_adb: "Manca adb: torna al passo Collega.",
+    timeout: "Il telefono non ha risposto in tempo. Controlla il cavo e riprova.",
+    unauthorized: "Il telefono chiede il permesso: sbloccalo e tocca Consenti nella finestra \"Consentire il debug USB?\".",
+    disconnected: "Ho perso il collegamento con il telefono. Controlla il cavo, sblocca il telefono e riprova. Non ho cambiato niente.",
+    read_failed: "Non riesco a leggere il telefono. Scollega e ricollega il cavo e riprova.",
+    bad_target: "Telefono non valido: torna al passo Collega.",
+    no_apps: "Non hai scelto nessuna app.",
+    bad_package: "Nome di app non valido: {package}",
+    too_many: "Al massimo {max} app per gruppo.",
+    bad_pair: "Scrivi indirizzo (es. 192.168.1.20:37123) e codice di 6 cifre come li mostra il telefono.",
+    bad_addr: "Scrivi l'indirizzo come lo mostra Debug wireless, es. 192.168.1.20:41234.",
+    bad_name: "Scrivi il nome del telefono come lo leggi in Impostazioni → Info telefono.",
+    reboot_refused: "Il telefono non ha accettato il riavvio. Riavvialo tu con il tasto di accensione.",
+    download_failed: "Non sono riuscito a scaricare adb. Controlla la connessione a internet, oppure installalo a mano (istruzioni nella pagina).",
+    busy: "Sto già facendo un'altra operazione sul telefono: aspetta che finisca.",
+    offline: "Phone Detox non risponde. La finestra nera (o il terminale) è ancora aperta? Se l'hai chiusa, riapri Phone Detox.",
+    unexpected: "Errore imprevisto.",
+  },
+},
+en: {
+  lang_switch: "Italiano", close: "Close",
+  steps: ["Before you start", "Connect", "Your phone", "Apps", "Done"],
+  next: "Next", back: "Back", ok: "OK", cancel: "Cancel", details: "Technical details", retry: "Try again",
+  start_title: "Before you start",
+  start_intro: "Phone Detox turns off the useless apps on your Android phone: ads, hidden programs, manufacturer duplicates. The phone gets lighter and bothers you less.",
+  start_need: "<b>You need:</b> the phone, a USB cable and about half an hour.",
+  start_risk: "<p><b>There is some risk.</b> Turning off system apps sometimes breaks a feature and, in the worst (rare) case, the phone may not start properly.</p><p>That's why we go <b>in small groups</b> (10 apps at most), <b>restart and test</b> the phone after each group, and everything can be <b>turned back on</b> with one button. Apps are not deleted.</p>",
+  start_backup: "<b>Back up first</b> your photos, chats (e.g. WhatsApp backup) and contacts.",
+  start_ack: "I understand the risks and I made a backup (or I choose to go ahead without one).",
+  conn_title: "Connect the phone",
+  conn_checking: "Checking the computer…", conn_searching: "Looking for the phone…",
+  conn_no_sh: "<p><b>A component is missing on this computer: Git for Windows.</b> Phone Detox uses it to run its scripts.</p><ol><li>Open the download page with the button below and download Git for Windows.</li><li>Install it keeping the default options.</li><li>Close Phone Detox (the black window too) and open it again.</li></ol>",
+  conn_no_sh_btn: "Download Git for Windows",
+  conn_no_adb: "<p><b>adb is missing</b>: it's Google's official program that talks to the phone. I can install it for you: it's about 10 MB.</p>",
+  conn_install_adb: "Install adb for me", conn_installing: "Downloading adb from Google…",
+  conn_adb_manual: "Rather install it yourself?",
+  conn_adb_linux: "Open a terminal and type <span class=\"mono\">sudo apt install adb</span> (Fedora: <span class=\"mono\">sudo dnf install android-tools</span>, Arch: <span class=\"mono\">sudo pacman -S android-tools</span>).",
+  conn_adb_mac: "Open Terminal and type <span class=\"mono\">brew install android-platform-tools</span> (needs Homebrew, brew.sh).",
+  conn_adb_windows: "Download the Windows <b>SDK Platform Tools</b> from the Android website and copy the <b>platform-tools</b> folder into the Phone Detox folder:",
+  conn_recheck: "Check again",
+  conn_none: "<b>No phone connected.</b> Follow the steps below: this page refreshes by itself.",
+  conn_debug: "<ol><li>On the phone open <b>Settings → About phone</b> and tap <b>Build number 7 times</b>, until you see \"You are now a developer\".<ul class=\"small\"><li>Samsung: About phone → Software information → Build number</li><li>Xiaomi, Redmi, POCO: tap MIUI version / HyperOS version</li><li>OnePlus, Oppo, Realme: About device → Version → Build number</li></ul></li><li>Go back, open <b>Developer options</b> (sometimes under Settings → System, or Additional settings) and turn on <b>USB debugging</b>. On Xiaomi also turn on <b>USB debugging (Security settings)</b>.</li><li>Plug in the cable. Use a <b>data cable</b>: some cables only charge. If the phone asks what to do with USB, choose <b>File transfer</b>.</li><li>The phone shows \"Allow USB debugging?\": tick <b>Always allow</b> and tap <b>Allow</b>.</li></ol>",
+  conn_ok: "Connected", conn_wait: "Waiting for your permission", conn_noperm: "The computer has no permission", conn_bad: "Not responding ({state})",
+  conn_unauth: "<b>Unlock the phone</b> and look at the screen: there's an \"Allow USB debugging?\" window. Tick <b>Always allow</b> and tap <b>Allow</b>.<p class=\"small\" style=\"margin:6px 0 0\">No window? Unplug and replug the cable with the phone unlocked, or turn USB debugging off and on again in Developer options.</p>",
+  conn_noperm_help: "<b>Linux does not let this user access the phone.</b> Open a terminal, type <span class=\"mono\">sudo apt install adb</span> (it also installs the phone permissions), then unplug and replug the cable.",
+  conn_many: "There's more than one device: choose the one to clean.",
+  conn_phone: "Phone",
+  wifi_title: "Without a cable (Wi-Fi, Android 11 or newer)",
+  wifi_note: "A cable is easier: the phone restarts after each group, and without a cable you have to reconnect every time.",
+  wifi_steps: "<li>Phone and computer on the same Wi-Fi network.</li><li>In <b>Developer options → Wireless debugging</b> turn it on and tap <b>Pair device with pairing code</b>.</li><li>Type here the address and code you see:</li>",
+  wifi_code: "Code (6 digits)", wifi_pair: "Pair",
+  wifi_step4: "4. Then type the address shown at the top of the Wireless debugging screen (the port is different):",
+  wifi_connect: "Connect", wifi_pairing: "Pairing the phone…", wifi_connecting: "Connecting to the phone…",
+  wifi_paired: "Paired", wifi_paired_text: "Now type the address to connect (step 4).",
+  wifi_failed: "It didn't work", wifi_failed_text: "Check address and code and try again.",
+  phone_title: "Your phone", phone_reading: "Reading the phone…",
+  f_name: "Name", f_model: "Model number", f_system: "System", f_storage: "Storage", f_ram: "RAM", f_carrier: "Carrier",
+  unknown: "unknown",
+  phone_confirmed: "You already confirmed it's a <b>{name}</b>.",
+  phone_check: "To be safe, check: on the phone open <b>Settings → About phone</b>. Does it say <b>{name}</b>, model <b>{model}</b>?",
+  phone_yes: "Yes, that's right", phone_no: "No, it says something else", phone_wrong: "That's not right",
+  phone_unsure: "I'm not sure about the name. On the phone open <b>Settings → About phone</b> (on Samsung it's at the top) and type here what you read.",
+  phone_name: "Phone name", phone_model: "Model number", phone_confirm: "Confirm",
+  phone_both: "Type both the name and the model number.",
+  phone_mismatch: "The number you read ({typed}) doesn't match the connected phone ({model}). Maybe another device is connected: check and try again.",
+  saving: "Saving…",
+  apps_title: "Apps", ram_now: "Free RAM now", recommended: "Recommended", groups_done: "Groups done",
+  managed: "This phone is <b>managed</b> (by an employer or a management app): don't touch the management apps.",
+  apps_reading: "Reading the phone's apps… (it can take a minute)",
+  how_title: "How it works",
+  how_text: "<ol class=\"small\"><li>Tick up to <b>10 apps</b> (or press <b>Choose the safest for me</b>).</li><li>Press <b>Turn off the group</b> at the bottom.</li><li>Restart the phone and check everything works.</li><li>Repeat with other apps, or press <b>I'm done</b>.</li></ol>",
+  pick_for_me: "Choose the safest for me",
+  tabs: { via: "Recommended", serve: "You may need", tua: "Yours", dubbio: "Unknown", mai: "System", spente: "Already off" },
+  tab_help: {
+    via: "Usually safe to turn off: ads, hidden programs, manufacturer duplicates. <b>If you use one, leave it on.</b>",
+    serve: "They provide a feature you might use. Turn them off only if you're sure you don't (e.g. Android Auto without a compatible car, Printing if you never print from the phone).",
+    tua: "You installed them, or they came with the phone and update from the store. The normal way to remove them is <b>Settings → Apps → Uninstall</b>; here you can also turn them off.",
+    dubbio: "I don't know what they are: <b>they stay on</b>. Turn on expert mode only if you know exactly what an app is.",
+    mai: "The phone needs them to start, call, receive messages, connect and stay secure. They can't be turned off.",
+    spente: "Apps already turned off or removed. You can turn them back on one by one.",
+  },
+  badges: { via: "recommended", serve: "you may need it", tua: "yours", dubbio: "unknown", mai: "system" },
+  expert: "Expert mode: I know what the app I want to turn off is (I checked, for example on Universal Android Debloater).",
+  search: "Search an app", none_here: "No apps here.",
+  st_off: "off", st_removed: "removed", turn_on: "Turn on",
+  lock_title: "Can't be turned off", why_dubbio: "Unknown: turn on expert mode to choose it",
+  why_full: "You already have 10 apps in the group: turn off this group or untick one",
+  full_box: "<b>You chose 10 apps: that's the maximum for a group.</b> The others are locked until you turn off this group (<b>Turn off the group</b> button at the bottom) or untick one. After restarting and testing you can choose more.",
+  done_title: "Finished?", done_text: "When you've turned off what you wanted, go to the end for the summary.", done_btn: "I'm done",
+  bar_count: "<b>{n}/10</b> apps in the group", clear: "Clear", turn_off_group: "Turn off the group",
+  nothing_to_pick: "There are no more recommended apps to choose.",
+  confirm_title: "Turn off these {n} apps?",
+  confirm_warn: "<b>Careful:</b> you might use these: {list}. If you do, cancel and untick them.",
+  confirm_text: "Then we'll restart the phone and you'll check everything works. They can be turned back on anytime.",
+  confirm_yes: "Yes, turn them off", turning_off: "Turning the apps off…",
+  nothing_changed: "Nothing changed", nothing_changed_text: "The apps were already off, or the program refused them for safety.",
+  failed_title: "Some apps didn't turn off", failed_text: "The phone doesn't allow turning off these apps:",
+  failed_offer: "I can <b>remove them for your user</b>: they disappear for you but stay on the phone, and the Turn on button brings them back, without a reset.",
+  failed_remove: "Remove them for my user", failed_leave: "Leave them", removing: "Removing the apps for your user…",
+  failed_again: "I couldn't do it",
+  reboot_title: "Now restart the phone", reboot_text: "I turned off {n} apps: {list}.", reboot_why: "Restarting matters: only afterwards can you really see if everything works.",
+  reboot_btn: "Restart the phone", reboot_self: "I restarted it myself",
+  rebooting: "The phone is restarting. It takes about a minute: don't unplug the cable.",
+  reboot_slow_title: "Almost", reboot_slow: "The phone is taking a while to start. Wait for the lock screen, then continue.",
+  test_title: "Test the phone", test_intro: "Unlock the phone and try these (the ones you use):",
+  tests: ["A call (make and receive)", "An SMS", "Internet on mobile data (Wi-Fi off)", "Wi-Fi", "Bluetooth, if you use it", "A notification (e.g. a WhatsApp message)", "The camera", "A test alarm", "Your banking app or a contactless payment, if you use them"],
+  test_ok: "Everything works: next", test_bad: "Something's wrong: turn this group back on", test_group: "Apps in this group: {list}",
+  undoing_group: "Turning this group back on…",
+  group_back: "Group turned back on", group_partial: "Not all of them came back", group_back_text: "Now restart the phone so everything starts as before.",
+  reboot_later: "I'll restart it myself", turning_on: "Turning on…",
+  restored: "Turned on", restored_text: "{name} is on again.",
+  not_restored: "Not turned on", not_restored_text: "This app wasn't turned off with Phone Detox. To turn it on, use Rescue on the Done page.",
+  end_title: "Done!", ram_before: "Free RAM before", apps_off: "Apps turned off",
+  ram_note: "Restarting also frees memory: the comparison is only indicative.",
+  end_list: "The apps you turned off",
+  end_debug: "<b>One last important thing:</b> on the phone open <b>Settings → Developer options</b> and turn off <b>USB debugging</b> (and <b>Wireless debugging</b> if you used it). Leaving them on is useless and not safe.",
+  later_title: "Later on",
+  later_list: "The list of what you turned off is saved on the computer (folder {path}) and on the phone too.",
+  later_update: "System updates sometimes turn apps back on. After an update, open Phone Detox again and use these buttons:",
+  check: "Check", check_fix: "Turn off the ones that came back", checking: "Checking…", fixing: "Turning off…",
+  check_ok: "All good", check_changed: "{n} apps turned back on. Press \"Turn off the ones that came back\".", check_fixed: "I turned off {n} apps again.", check_empty: "Nothing to check: you haven't turned anything off with Phone Detox on this phone yet.",
+  trouble: "If something's wrong",
+  undo_all: "Turn on everything Phone Detox turned off", rescue: "Rescue: turn on every app that's off",
+  undo_all_text: "I'll turn on every app Phone Detox turned off on this phone.",
+  rescue_text: "I'll turn on <b>every</b> app that's off or removed on the phone, including those turned off before Phone Detox or by other programs.",
+  undo_yes: "Yes, turn on", undone: "Done", undone_text: "Now restart the phone.",
+  back_to_apps: "Back to the apps", quit: "Close Phone Detox",
+  quit_q: "Close Phone Detox?", quit_text: "If you're in the middle of a group, you'll pick up from there when you open it again.",
+  closed_title: "Phone Detox is closed", closed_text: "You can close this tab.", closed_debug: "Remember to turn off <b>USB debugging</b> in Developer options.",
+  err_title: "Something went wrong",
+  err: {
+    no_sh: "Git for Windows is missing: go back to the Connect step.",
+    no_adb: "adb is missing: go back to the Connect step.",
+    timeout: "The phone didn't answer in time. Check the cable and try again.",
+    unauthorized: "The phone is asking for permission: unlock it and tap Allow in the \"Allow USB debugging?\" window.",
+    disconnected: "I lost the connection to the phone. Check the cable, unlock the phone and try again. Nothing was changed.",
+    read_failed: "I can't read the phone. Unplug and replug the cable and try again.",
+    bad_target: "Invalid phone: go back to the Connect step.",
+    no_apps: "You haven't chosen any app.",
+    bad_package: "Invalid app name: {package}",
+    too_many: "At most {max} apps per group.",
+    bad_pair: "Type the address (e.g. 192.168.1.20:37123) and the 6-digit code as the phone shows them.",
+    bad_addr: "Type the address as Wireless debugging shows it, e.g. 192.168.1.20:41234.",
+    bad_name: "Type the phone's name as you read it in Settings → About phone.",
+    reboot_refused: "The phone didn't accept the restart. Restart it yourself with the power button.",
+    download_failed: "I couldn't download adb. Check your internet connection, or install it yourself (instructions on the page).",
+    busy: "I'm already doing something else on the phone: wait for it to finish.",
+    offline: "Phone Detox isn't responding. Is the black window (or terminal) still open? If you closed it, open Phone Detox again.",
+    unexpected: "Unexpected error.",
+  },
+},
+};
+
+// Safest first for "Choose for me": ads, tracking, hidden installers, leftovers.
+const SAFE_ORDER = ["com.miui.msa.global", "com.miui.analytics", "com.miui.daemon", "com.facebook.appmanager", "com.facebook.services",
+  "com.facebook.system", "com.amazon.appmanager", "com.netflix.partner.activation", "com.google.android.feedback", "com.miui.bugreport",
+  "com.android.egg", "com.android.dreams.basic", "com.android.dreams.phototable", "com.samsung.android.app.tips",
+  "com.heytap.pictorial", "com.miui.android.fashiongallery", "com.miui.miservice", "com.android.providers.partnerbookmarks",
+  "com.android.bookmarkprovider", "com.android.htmlviewer"];
+
+// ---------------------------------------------------------------------------------------------
+const S = {
+  lang: "en", step: 0, env: null, devices: null, serial: null, kv: null, idForm: false, idError: "",
+  infoStart: null, infoEnd: null, apps: null, selected: new Set(),
+  tab: "via", search: "", expert: false, pending: null, groups: [], appsError: null,
+};
+try { S.lang = localStorage.getItem("pd:lang") || ""; } catch (e) {}
+if (!T[S.lang]) S.lang = (navigator.language || "").toLowerCase().startsWith("it") ? "it" : "en";
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $ = id => document.getElementById(id);
+function t(key, params) {
+  let v = key.split(".").reduce((o, k) => o && o[k], T[S.lang]);
+  if (v === undefined) v = key.split(".").reduce((o, k) => o && o[k], T.en) ?? key;
+  if (typeof v === "string" && params) v = v.replace(/\{(\w+)\}/g, (m, k) => k in params ? esc(params[k]) : m);
+  return v;
+}
+function switchLang() { S.lang = S.lang === "it" ? "en" : "it"; try { localStorage.setItem("pd:lang", S.lang); } catch (e) {} render(); }
+
+function save() {
+  if (!S.serial) return;
+  try { localStorage.setItem("pd:" + S.serial, JSON.stringify({ pending: S.pending, groups: S.groups, infoStart: S.infoStart })); } catch (e) {}
+}
+function load() {
+  try { const d = JSON.parse(localStorage.getItem("pd:" + S.serial) || "null"); if (d) Object.assign(S, d); } catch (e) {}
+}
+
+class ApiError extends Error { constructor(code, params, detail) { super(code); this.code = code; this.params = params || {}; this.detail = detail || ""; } }
+async function api(name, data = {}) {
+  let r;
+  try {
+    r = await fetch("/api/" + name, { method: "POST", headers: { "Content-Type": "application/json", "X-Token": TOKEN }, body: JSON.stringify(data) });
+  } catch (e) { throw new ApiError("offline"); }
+  let j; try { j = await r.json(); } catch (e) { throw new ApiError("offline"); }
+  if (!r.ok) throw new ApiError(j.error || "unexpected", j.params, j.detail);
+  return j;
+}
+const errText = e => e instanceof ApiError ? t("err." + e.code, e.params) : t("err.unexpected");
+const errDetail = e => (e && e.detail) ? `<details><summary>${t("details")}</summary><pre>${esc(e.detail)}</pre></details>` : "";
+function busy(msg) {
+  $("modal").innerHTML = msg ? `<div class="overlay"><div class="dialog" style="text-align:center"><div class="spinner"></div><p>${esc(msg)}</p></div></div>` : "";
+}
+function dialog(html) { $("modal").innerHTML = `<div class="overlay"><div class="dialog" role="dialog" aria-modal="true">${html}</div></div>`; }
+function closeDialog() { $("modal").innerHTML = ""; }
+const okBtn = (extra = "") => `<div class="row"><button class="primary" onclick="closeDialog();${extra}">${t("ok")}</button></div>`;
+const detailsOf = out => out ? `<details><summary>${t("details")}</summary><pre>${esc(out)}</pre></details>` : "";
+function showError(e, after = "") { dialog(`<h2>${t("err_title")}</h2><div class="box bad">${errText(e)}</div>${errDetail(e)}${okBtn(after)}`); }
+async function withBusy(msg, fn) {
+  busy(msg);
+  try { const r = await fn(); busy(""); return r; }
+  catch (e) { showError(e); throw e; }
+}
+const appName = a => a.name[S.lang] || a.name.it || a.package;
+const nameOf = p => { const a = (S.apps || []).find(x => x.package === p); return a ? appName(a) : p; };
+function go(step) { S.step = step; render(); window.scrollTo(0, 0); onEnter(); }
+
+// ---------------------------------------------------------------------------------------------
+// Views
+function render() {
+  document.documentElement.lang = S.lang;
+  $("langBtn").textContent = t("lang_switch");
+  $("closeBtn").textContent = t("close");
+  $("steps").innerHTML = t("steps").map((s, i) => `<span class="step ${i === S.step ? "on" : i < S.step ? "done" : ""}">${i < S.step ? "✓ " : (i + 1) + ". "}${s}</span>`).join("");
+  $("view").innerHTML = [vStart, vConnect, vPhone, vApps, vEnd][S.step]();
+  $("bar").innerHTML = S.step === 3 && S.apps && !S.pending ? vBar() : "";
+}
+
+function vStart() {
+  return `<div class="card">
+    <h2>${t("start_title")}</h2>
+    <p>${t("start_intro")}</p>
+    <p>${t("start_need")}</p>
+    <div class="box warn">${t("start_risk")}</div>
+    <p>${t("start_backup")}</p>
+    <label class="check"><input type="checkbox" id="ack" onchange="$('go1').disabled=!this.checked"><span>${t("start_ack")}</span></label>
+    <div class="row"><button class="primary big" id="go1" disabled onclick="go(1)">${t("next")}</button></div>
+  </div>`;
+}
+
+function vConnect() {
+  const e = S.env, d = S.devices;
+  let status;
+  if (!e) status = `<p class="muted">${t("conn_checking")}</p>`;
+  else if (!e.sh) status = `<div class="box bad">${t("conn_no_sh")}
+      <div class="row"><a class="btn primary" href="https://git-scm.com/download/win" target="_blank" rel="noopener">${t("conn_no_sh_btn")}</a></div></div>`;
+  else if (!e.adb || (d && !d.adb)) {
+    const manual = e.os === "windows" ? `${t("conn_adb_windows")}<br><span class="mono">${esc(e.root)}</span>` : t("conn_adb_" + e.os);
+    status = `<div class="box warn">${t("conn_no_adb")}
+      <div class="row"><button class="primary big" onclick="installAdb()">${t("conn_install_adb")}</button></div></div>
+      <details><summary>${t("conn_adb_manual")}</summary><p class="small">${manual}</p>
+      <button onclick="checkEnv()">${t("conn_recheck")}</button></details>`;
+  }
+  else if (!d) status = `<p class="muted">${t("conn_searching")}</p>`;
+  else {
+    const list = d.devices, ready = list.filter(x => x.state === "device");
+    if (!list.length) status = `<div class="box info"><span class="dot"></span>${t("conn_none")}</div>${t("conn_debug")}`;
+    else {
+      status = list.map(x => {
+        const st = x.state === "device" ? `<span class="dot ok"></span>${t("conn_ok")}`
+          : x.state === "unauthorized" ? `<span class="dot warn"></span>${t("conn_wait")}`
+          : x.state === "no-permissions" ? `<span class="dot bad"></span>${t("conn_noperm")}`
+          : `<span class="dot bad"></span>${t("conn_bad", { state: x.state })}`;
+        const pick = ready.length > 1 && x.state === "device"
+          ? `<input type="radio" name="dev" ${S.serial === x.serial ? "checked" : ""} onchange="S.serial=this.value;render()" value="${esc(x.serial)}">` : "";
+        return `<label class="app">${pick}<span class="what"><b>${esc(x.model || t("conn_phone"))}</b><div class="pkg">${esc(x.serial)}</div></span><span>${st}</span></label>`;
+      }).join("");
+      if (list.some(x => x.state === "unauthorized")) status += `<div class="box warn">${t("conn_unauth")}</div>`;
+      if (list.some(x => x.state === "no-permissions")) status += `<div class="box bad">${t("conn_noperm_help")}</div>`;
+      if (ready.length > 1) status += `<p class="small muted">${t("conn_many")}</p>`;
+    }
+  }
+  const ready = d && d.devices.filter(x => x.state === "device");
+  const can = !!(ready && ready.some(x => x.serial === S.serial));
+  return `<div class="card"><h2>${t("conn_title")}</h2>${status}
+    <div class="row"><button class="primary big" ${can ? "" : "disabled"} onclick="pickDevice()">${t("next")}</button><button onclick="go(0)">${t("back")}</button></div></div>
+    ${e && e.adb && e.sh ? `<div class="card"><details id="wifi"><summary>${t("wifi_title")}</summary>
+      <p class="small">${t("wifi_note")}</p>
+      <ol class="small">${t("wifi_steps")}</ol>
+      <div class="row"><input type="text" id="pairAddr" placeholder="192.168.1.20:37123"><input type="text" id="pairCode" placeholder="${esc(t("wifi_code"))}" style="max-width:170px"><button onclick="pair()">${t("wifi_pair")}</button></div>
+      <p class="small" style="margin-top:12px">${t("wifi_step4")}</p>
+      <div class="row" style="margin-top:0"><input type="text" id="connAddr" placeholder="192.168.1.20:41234"><button onclick="connectWifi()">${t("wifi_connect")}</button></div>
+    </details></div>` : ""}`;
+}
+
+function vPhone() {
+  const k = S.kv;
+  if (!k) return `<div class="card"><h2>${t("phone_title")}</h2><p class="muted">${t("phone_reading")}</p></div>`;
+  const name = [k.BRAND || k.MAKER, k.MARKET].filter(Boolean).join(" ") || k.MODEL;
+  const facts = [["f_name", k.MARKET || t("unknown")], ["f_model", k.MODEL], ["f_system", `Android ${k.ANDROID}${k.SKIN ? ", " + k.SKIN : ""}`],
+    ["f_storage", k.STORAGE], ["f_ram", k.RAM_MB ? k.RAM_MB + " MB" : ""], ["f_carrier", k.CARRIER]]
+    .filter(f => f[1]).map(f => `<dt>${t(f[0])}</dt><dd>${esc(f[1])}</dd>`).join("");
+  let body;
+  if (k.CONFIDENCE === "confermato" && !S.idForm) {
+    body = `<div class="box ok">${t("phone_confirmed", { name: k.MARKET })}</div>
+      <div class="row"><button class="primary big" onclick="go(3)">${t("next")}</button><button onclick="S.idForm=true;render()">${t("phone_wrong")}</button></div>`;
+  } else if (k.CONFIDENCE === "alta" && !S.idForm) {
+    body = `<p>${t("phone_check", { name: k.MARKET, model: k.MODEL })}</p>
+      <div class="row"><button class="primary big" onclick="confirmName(S.kv.MARKET)">${t("phone_yes")}</button><button onclick="S.idForm=true;render()">${t("phone_no")}</button></div>`;
+  } else {
+    body = `<div class="box warn">${t("phone_unsure")}</div>
+      <p><label>${t("phone_name")}<br><input type="text" id="idName" value="${esc(k.MARKET)}" placeholder="Galaxy A54 5G"></label></p>
+      <p><label>${t("phone_model")}<br><input type="text" id="idModel" placeholder="${esc(k.MODEL)}"></label></p>
+      ${S.idError ? `<div class="box bad">${S.idError}</div>` : ""}
+      <div class="row"><button class="primary big" onclick="confirmForm()">${t("phone_confirm")}</button></div>`;
+  }
+  return `<div class="card"><h2>${t("phone_title")}</h2><p style="font-size:21px;margin-bottom:4px"><b>${esc(name)}</b></p>
+    <dl class="facts">${facts}</dl>${body}
+    <div class="row"><button onclick="go(1)">${t("back")}</button></div></div>`;
+}
+
+const TAB_IDS = ["via", "serve", "tua", "dubbio", "mai", "spente"];
+const inTab = (a, id) => id === "spente" ? a.state !== "on" : (a.verdict === id && a.state === "on");
+
+function vApps() {
+  const i = S.infoStart;
+  const nVia = S.apps ? S.apps.filter(a => inTab(a, "via")).length : "…";
+  const head = `<div class="card"><h2>${t("apps_title")}</h2>
+    ${i ? `<div class="stats"><div class="stat"><span class="small muted">${t("ram_now")}</span><b>${i.ram_free ?? "?"} MB</b></div>
+      <div class="stat"><span class="small muted">${t("recommended")}</span><b>${nVia}</b></div>
+      <div class="stat"><span class="small muted">${t("groups_done")}</span><b>${S.groups.filter(g => g.ok).length}</b></div></div>` : ""}
+    ${i && i.managed ? `<div class="box bad">${t("managed")}</div>` : ""}
+    ${!S.pending ? `<details ${S.groups.length ? "" : "open"}><summary>${t("how_title")}</summary>${t("how_text")}</details>` : ""}
+  </div>`;
+  if (S.pending) return head + vTest();
+  if (S.appsError) return head + `<div class="card"><div class="box bad">${errText(S.appsError)}</div>${errDetail(S.appsError)}<div class="row"><button onclick="loadApps()">${t("retry")}</button></div></div>`;
+  if (!S.apps) return head + `<div class="card"><p class="muted">${t("apps_reading")}</p></div>`;
+
+  const q = S.search.trim().toLowerCase();
+  const list = S.apps.filter(a => inTab(a, S.tab)).filter(a => !q || (appName(a) + " " + a.package).toLowerCase().includes(q));
+  const tabs = TAB_IDS.map(id => `<button class="tab ${S.tab === id ? "on" : ""}" onclick="S.tab='${id}';render()">${t("tabs." + id)} (${S.apps.filter(a => inTab(a, id)).length})</button>`).join("");
+  const rows = list.map(a => {
+    const reason = a.reason ? `<div class="why">${esc(a.reason[S.lang] || a.reason.it)}</div>` : "";
+    const nm = `<span class="what"><b>${esc(appName(a))}</b>${reason}<div class="pkg">${esc(a.package)}</div></span>`;
+    if (a.state !== "on")
+      return `<div class="app"><span class="lock">⏻</span>${nm}<span class="badge">${t(a.state === "off" ? "st_off" : "st_removed")}</span>
+        <button onclick="restoreOne('${esc(a.package)}')">${t("turn_on")}</button></div>`;
+    if (a.verdict === "mai") return `<div class="app"><span class="lock" title="${esc(t("lock_title"))}">🔒</span>${nm}</div>`;
+    const full = S.selected.size >= 10 && !S.selected.has(a.package);
+    const why = a.verdict === "dubbio" && !S.expert ? t("why_dubbio") : full ? t("why_full") : "";
+    return `<label class="app" ${why ? `title="${esc(why)}"` : ""}><input type="checkbox" ${S.selected.has(a.package) ? "checked" : ""} ${why ? "disabled" : ""}
+      onchange="toggle('${esc(a.package)}', this.checked)">${nm}<span class="badge ${a.verdict}">${t("badges." + a.verdict)}</span></label>`;
+  }).join("") || `<p class="muted">${t("none_here")}</p>`;
+  return head + `<div class="card">
+    <div class="tabs">${tabs}</div>
+    <p class="small">${t("tab_help." + S.tab)}</p>
+    ${S.tab === "via" ? `<div class="row" style="margin:4px 0 12px"><button onclick="pickForMe()">✨ ${t("pick_for_me")}</button></div>` : ""}
+    ${S.tab === "dubbio" ? `<label class="check small"><input type="checkbox" ${S.expert ? "checked" : ""} onchange="S.expert=this.checked;render()"><span>${t("expert")}</span></label>` : ""}
+    ${S.selected.size >= 10 ? `<div class="box info">${t("full_box")}</div>` : ""}
+    <input type="search" placeholder="${esc(t("search"))}" value="${esc(S.search)}" oninput="S.search=this.value;renderKeepFocus()">
+    <div style="margin-top:8px">${rows}</div></div>
+    <div class="card"><h3 style="margin-top:0">${t("done_title")}</h3><p class="small">${t("done_text")}</p>
+      <div class="row"><button onclick="go(4)">${t("done_btn")}</button></div></div>`;
+}
+
+function renderKeepFocus() {
+  const pos = document.activeElement && document.activeElement.selectionStart;
+  render();
+  const el = document.querySelector("input[type=search]");
+  if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch (e) {} }
+}
+
+function vBar() {
+  const n = S.selected.size, names = [...S.selected].map(nameOf);
+  return `<div class="bar"><div class="wrap"><span class="count">${t("bar_count", { n })}${n ? ": " + esc(names.slice(0, 3).join(", ")) + (n > 3 ? "…" : "") : ""}</span>
+    <button ${n ? "" : "disabled"} onclick="S.selected.clear();render()">${t("clear")}</button>
+    <button class="primary big" ${n ? "" : "disabled"} onclick="askDisable()">${t("turn_off_group")}</button></div></div>`;
+}
+
+function vTest() {
+  const p = S.pending, names = p.packages.map(nameOf);
+  if (p.failed && p.failed.length && !p.failedHandled) {
+    return `<div class="card"><h2>${t("failed_title")}</h2>
+      <p>${t("failed_text")}</p><ul>${p.failed.map(x => `<li>${esc(nameOf(x))}</li>`).join("")}</ul>
+      <div class="box info">${t("failed_offer")}</div>
+      <div class="row"><button class="primary" onclick="uninstallFailed()">${t("failed_remove")}</button><button onclick="S.pending.failedHandled=true;save();render()">${t("failed_leave")}</button></div></div>`;
+  }
+  if (!p.rebooted) {
+    return `<div class="card"><h2>${t("reboot_title")}</h2>
+      <p>${t("reboot_text", { n: names.length, list: names.join(", ") })}</p>
+      <p>${t("reboot_why")}</p>
+      <div class="row"><button class="primary big" onclick="reboot()">${t("reboot_btn")}</button><button onclick="S.pending.rebooted=true;save();render()">${t("reboot_self")}</button></div>
+      ${detailsOf(p.output)}</div>`;
+  }
+  return `<div class="card"><h2>${t("test_title")}</h2>
+    <p>${t("test_intro")}</p>
+    ${t("tests").map(x => `<label class="check"><input type="checkbox"><span>${esc(x)}</span></label>`).join("")}
+    <div class="row"><button class="primary big" onclick="groupOk()">${t("test_ok")}</button>
+      <button class="danger" onclick="groupBad()">${t("test_bad")}</button></div>
+    <p class="small muted" style="margin-top:10px">${t("test_group", { list: names.join(", ") })}</p></div>`;
+}
+
+function vEnd() {
+  const a = S.infoStart, b = S.infoEnd;
+  const done = S.groups.filter(g => g.ok).flatMap(g => g.packages);
+  return `<div class="card"><h2>${t("end_title")}</h2>
+    ${b ? `<div class="stats"><div class="stat"><span class="small muted">${t("ram_before")}</span><b>${a && a.ram_free ? a.ram_free + " MB" : "?"}</b></div>
+      <div class="stat"><span class="small muted">${t("ram_now")}</span><b>${b.ram_free ?? "?"} MB</b></div>
+      <div class="stat"><span class="small muted">${t("apps_off")}</span><b>${done.length}</b></div></div>
+      <p class="small muted" style="margin-top:8px">${t("ram_note")}</p>` : `<p class="muted">${t("phone_reading")}</p>`}
+    ${done.length ? `<details><summary>${t("end_list")}</summary><ul class="small">${done.map(p => `<li>${esc(nameOf(p))}</li>`).join("")}</ul></details>` : ""}
+    <div class="box warn">${t("end_debug")}</div>
+  </div>
+  <div class="card"><h3 style="margin-top:0">${t("later_title")}</h3>
+    <p class="small">${t("later_list", { path: S.env ? S.env.changes : "changes" })}</p>
+    <p class="small">${t("later_update")}</p>
+    <div class="row"><button onclick="check(false)">${t("check")}</button><button onclick="check(true)">${t("check_fix")}</button></div>
+    <h3>${t("trouble")}</h3>
+    <div class="row" style="margin-top:0"><button class="danger" onclick="undoAll(false)">${t("undo_all")}</button>
+      <button class="danger" onclick="undoAll(true)">${t("rescue")}</button></div>
+    <div class="row"><button onclick="go(3)">${t("back_to_apps")}</button><button class="primary big" onclick="askQuit()">${t("quit")}</button></div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Actions
+let pollTimer = null;
+async function onEnter() {
+  clearInterval(pollTimer);
+  if (S.step === 1) { await checkEnv(); pollTimer = setInterval(pollDevices, 2500); }
+  if (S.step === 2) {
+    S.kv = null; S.idForm = false; S.idError = ""; render();
+    try { S.kv = await api("identify", { serial: S.serial }); render(); }
+    catch (e) { showError(e, "go(1)"); }
+  }
+  if (S.step === 3) {
+    load(); render();
+    if (!S.infoStart) {
+      try { S.infoStart = await api("info", { serial: S.serial }); save(); render(); }
+      catch (e) { S.appsError = e; render(); return; }
+    }
+    if (!S.apps) loadApps();
+  }
+  if (S.step === 4) {
+    if (!S.env) try { S.env = await api("env"); } catch (e) {}
+    S.infoEnd = null; render();
+    try { S.infoEnd = await api("info", { serial: S.serial }); render(); } catch (e) { showError(e); }
+  }
+}
+async function checkEnv() { try { S.env = await api("env"); } catch (e) {} render(); await pollDevices(); }
+let polling = false;
+async function pollDevices() {
+  if (polling || S.step !== 1 || !S.env || !S.env.adb || !S.env.sh) return;
+  polling = true;
+  try {
+    const before = JSON.stringify([S.devices, S.serial]);
+    S.devices = await api("devices");
+    const ready = S.devices.devices.filter(x => x.state === "device");
+    if (!ready.some(x => x.serial === S.serial)) S.serial = ready.length === 1 ? ready[0].serial : null;
+    // Redraw only when something changed, so the Wi-Fi section doesn't close while typing.
+    if (JSON.stringify([S.devices, S.serial]) !== before && !document.querySelector("#view input[type=text]:focus")) {
+      const open = $("wifi")?.open;
+      render();
+      if (open && $("wifi")) $("wifi").open = true;
+    }
+  } catch (e) {} finally { polling = false; }
+}
+async function installAdb() {
+  try { await withBusy(t("conn_installing"), () => api("install_adb")); } catch (e) { return; }
+  await checkEnv();
+}
+function pickDevice() { S.apps = null; S.infoStart = null; S.groups = []; S.pending = null; S.selected.clear(); S.appsError = null; go(2); }
+async function pair() {
+  let r; try { r = await withBusy(t("wifi_pairing"), () => api("pair", { address: $("pairAddr").value.trim(), code: $("pairCode").value.trim() })); } catch (e) { return; }
+  dialog(`<h2>${t(r.ok ? "wifi_paired" : "wifi_failed")}</h2><p>${t(r.ok ? "wifi_paired_text" : "wifi_failed_text")}</p>${detailsOf(r.output)}${okBtn()}`);
+}
+async function connectWifi() {
+  let r; try { r = await withBusy(t("wifi_connecting"), () => api("connect", { address: $("connAddr").value.trim() })); } catch (e) { return; }
+  if (!r.ok) dialog(`<h2>${t("wifi_failed")}</h2>${detailsOf(r.output)}${okBtn()}`);
+  pollDevices();
+}
+async function confirmName(name) {
+  try { await withBusy(t("saving"), () => api("confirm", { serial: S.serial, name })); } catch (e) { return; }
+  go(3);
+}
+async function confirmForm() {
+  const name = $("idName").value.trim(), model = $("idModel").value.trim();
+  const norm = s => s.toUpperCase().replace(/[\s_-]/g, "");
+  if (!name || !model) { S.idError = t("phone_both"); return render(); }
+  if (norm(model) !== norm(S.kv.MODEL)) { S.idError = t("phone_mismatch", { typed: model, model: S.kv.MODEL }); return render(); }
+  S.idError = ""; await confirmName(name);
+}
+async function loadApps() {
+  S.appsError = null; S.apps = null; render();
+  try {
+    S.apps = (await api("apps", { serial: S.serial })).apps;
+    for (const p of [...S.selected]) { const a = S.apps.find(x => x.package === p); if (!a || a.state !== "on" || a.verdict === "mai") S.selected.delete(p); }
+  } catch (e) { S.appsError = e; }
+  render();
+}
+function toggle(p, on) { if (on && S.selected.size < 10) S.selected.add(p); else S.selected.delete(p); render(); }
+function pickForMe() {
+  const via = S.apps.filter(a => inTab(a, "via")).map(a => a.package);
+  const order = [...SAFE_ORDER.filter(p => via.includes(p)), ...via.filter(p => !SAFE_ORDER.includes(p))];
+  const before = S.selected.size;
+  for (const p of order) { if (S.selected.size >= 10) break; S.selected.add(p); }
+  if (S.selected.size === before && before < 10) dialog(`<p>${t("nothing_to_pick")}</p>${okBtn()}`);
+  render();
+}
+function askDisable() {
+  const chosen = [...S.selected].map(p => S.apps.find(x => x.package === p)).filter(Boolean);
+  const risky = chosen.filter(a => a.verdict !== "via").map(appName);
+  dialog(`<h2>${t("confirm_title", { n: chosen.length })}</h2>
+    <ul>${chosen.map(a => `<li><b>${esc(appName(a))}</b> <span class="badge ${a.verdict}">${t("badges." + a.verdict)}</span></li>`).join("")}</ul>
+    ${risky.length ? `<div class="box warn">${t("confirm_warn", { list: risky.join(", ") })}</div>` : ""}
+    <p class="small">${t("confirm_text")}</p>
+    <div class="row"><button class="primary big" onclick="doDisable()">${t("confirm_yes")}</button><button onclick="closeDialog()">${t("cancel")}</button></div>`);
+}
+async function doDisable() {
+  const pkgs = [...S.selected];
+  let r; try { r = await withBusy(t("turning_off"), () => api("disable", { serial: S.serial, packages: pkgs })); } catch (e) { return; }
+  S.selected.clear();
+  const changed = [...r.off, ...r.removed];
+  if (!changed.length && !r.failed.length) {
+    dialog(`<h2>${t("nothing_changed")}</h2><p>${t("nothing_changed_text")}</p>${detailsOf(r.output)}${okBtn()}`);
+    return loadApps();
+  }
+  S.pending = { packages: changed, failed: r.failed, output: r.output, rebooted: false };
+  save(); render(); window.scrollTo(0, 0);
+}
+async function uninstallFailed() {
+  let r; try { r = await withBusy(t("removing"), () => api("disable", { serial: S.serial, packages: S.pending.failed, uninstall: true })); } catch (e) { return; }
+  S.pending.packages.push(...r.off, ...r.removed);
+  S.pending.output += "\n" + r.output; S.pending.failedHandled = true;
+  if (!S.pending.packages.length) { S.pending = null; dialog(`<h2>${t("failed_again")}</h2>${detailsOf(r.output)}${okBtn()}`); loadApps(); }
+  save(); render();
+}
+async function reboot() {
+  let r; try { r = await withBusy(t("rebooting"), () => api("reboot", { serial: S.serial })); } catch (e) { return false; }
+  if (!r.ok) dialog(`<h2>${t("reboot_slow_title")}</h2><p>${t("reboot_slow")}</p>${okBtn()}`);
+  if (S.pending) { S.pending.rebooted = true; save(); render(); }
+  return true;
+}
+function groupOk() { S.groups.push({ packages: S.pending.packages, ok: true }); S.pending = null; save(); loadApps(); window.scrollTo(0, 0); }
+async function groupBad() {
+  let r; try { r = await withBusy(t("undoing_group"), () => api("undo", { serial: S.serial, packages: S.pending.packages })); } catch (e) { return; }
+  S.groups.push({ packages: S.pending.packages, ok: false }); S.pending = null; save();
+  dialog(`<h2>${t(r.rc === 0 ? "group_back" : "group_partial")}</h2><p>${t("group_back_text")}</p>${detailsOf(r.output)}
+    <div class="row"><button class="primary" onclick="closeDialog();rebootPlain()">${t("reboot_btn")}</button><button onclick="closeDialog()">${t("reboot_later")}</button></div>`);
+  loadApps();
+}
+async function rebootPlain() { if (await reboot()) loadApps(); }
+async function restoreOne(p) {
+  let r; try { r = await withBusy(t("turning_on"), () => api("undo", { serial: S.serial, packages: [p] })); } catch (e) { return; }
+  const ok = r.restored.includes(p);
+  dialog(`<h2>${t(ok ? "restored" : "not_restored")}</h2><p>${ok ? t("restored_text", { name: nameOf(p) }) : t("not_restored_text")}</p>${detailsOf(r.output)}${okBtn()}`);
+  loadApps();
+}
+async function check(fix) {
+  let r; try { r = await withBusy(t(fix ? "fixing" : "checking"), () => api("check", { serial: S.serial, fix })); } catch (e) { return; }
+  const msg = r.empty ? t("check_empty") : r.fixed ? t("check_fixed", { n: r.fixed }) : r.changed ? t("check_changed", { n: r.changed }) : t("check_ok");
+  dialog(`<h2>${t(r.rc === 0 || r.empty ? "check_ok" : "err_title")}</h2><p>${msg}</p>${detailsOf(r.output)}${okBtn()}`);
+}
+function undoAll(all) {
+  dialog(`<h2>${t(all ? "rescue" : "undo_all")}</h2><p>${t(all ? "rescue_text" : "undo_all_text")}</p>
+    <div class="row"><button class="danger" onclick="closeDialog();doUndoAll(${all})">${t("undo_yes")}</button><button onclick="closeDialog()">${t("cancel")}</button></div>`);
+}
+async function doUndoAll(all) {
+  let r; try { r = await withBusy(t("turning_on"), () => api("undo", { serial: S.serial, all })); } catch (e) { return; }
+  S.groups = []; S.pending = null; S.apps = null; save();
+  dialog(`<h2>${t("undone")}</h2><p>${t("undone_text")}</p>${detailsOf(r.output)}
+    <div class="row"><button class="primary" onclick="closeDialog();rebootPlain()">${t("reboot_btn")}</button><button onclick="closeDialog()">${t("reboot_later")}</button></div>`);
+}
+function askQuit() {
+  dialog(`<h2>${t("quit_q")}</h2><p>${t("quit_text")}</p>
+    <div class="row"><button class="primary" onclick="quitApp()">${t("quit")}</button><button onclick="closeDialog()">${t("cancel")}</button></div>`);
+}
+async function quitApp() {
+  try { await api("quit"); } catch (e) {}
+  clearInterval(pollTimer);
+  document.body.innerHTML = `<main><div class="wrap"><div class="card"><h2>${t("closed_title")}</h2><p>${t("closed_text")}</p>
+    <div class="box warn">${t("closed_debug")}</div></div></div></main>`;
+}
+
+render();
+</script>
+</body>
+</html>

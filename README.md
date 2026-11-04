@@ -1,258 +1,191 @@
 # Phone Detox
 
-### Togli il superfluo da un telefono Android, senza root e senza cancellare niente.
+**English** · [Italiano](README.it.md)
 
-Un fork di [tv-detox](https://github.com/Ansub/tv-detox) di Ansub Khan, rifatto solo per i
-telefoni. Niente home screen: qui c'è solo la pulizia, con regole e protezioni pensate per un
-telefono (chiamate, SMS, notifiche, pagamenti, allerte di emergenza).
+### Clean up an Android phone, without root and without deleting anything.
 
-| **🧹 Spegne il superfluo**<br>Bloatware del produttore, pubblicità di sistema, doppioni. | **🛡️ Protegge l'essenziale**<br>Rifiuta di spegnere quello che serve al telefono e le app predefinite. | **↩️ Si annulla sempre**<br>Le app vengono spente, non cancellate. Un comando le riaccende. |
+A fork of [tv-detox](https://github.com/Ansub/tv-detox) by Ansub Khan, rebuilt for phones
+only. It turns off preinstalled junk (ads, hidden installers, manufacturer duplicates) with
+safety rules made for a phone: calls, SMS, notifications, payments and emergency alerts are
+protected.
+
+| **🧹 Turns off the junk**<br>Manufacturer bloatware, system ads, duplicates. | **🛡️ Protects the essentials**<br>Refuses to turn off what the phone needs and your default apps. | **↩️ Always reversible**<br>Apps are turned off, not deleted. One button turns them back on. |
 | --- | --- | --- |
 
 > [!WARNING]
-> **A tuo rischio.** Spegnere app di sistema può rompere funzioni o, nel caso peggiore,
-> bloccare il telefono all'avvio. Gli script rifiutano le app pericolose note e chiedono
-> conferma, ma non conoscono ogni telefono. Fai un backup prima di cominciare e vai a piccoli
-> gruppi. `undo.sh` riaccende tutto.
+> **At your own risk.** Turning off system apps can break features or, in the worst case,
+> stop the phone from booting. Phone Detox refuses the known dangerous apps and asks before
+> every change, but it can't know every phone. Back up first and go in small groups.
+> Everything can be turned back on.
 
-## Cosa serve
+## Quick start (no technical knowledge needed)
 
-- Un computer (Mac, Linux o Windows) con `adb`:
-  - Mac: `brew install android-platform-tools`
-  - Linux: `sudo apt install adb` (o il pacchetto della tua distribuzione)
-  - Windows: scarica gli [SDK Platform Tools](https://developer.android.com/tools/releases/platform-tools)
-    e lancia gli script da Git Bash
-- Un cavo USB, oppure telefono e computer sulla stessa rete Wi-Fi
-- Facoltativo: [Claude Code](https://claude.com/claude-code) o un altro agente che gira sul
-  tuo computer, se vuoi che sia lui a guidarti
+**1. Download Phone Detox.** At the top of this page click **Code → Download ZIP**, then
+unzip it (on Windows: right-click → Extract all).
 
-## 1. Attiva il debug sul telefono
+**2. Install what's missing** (only once):
 
-1. **Impostazioni → Info telefono** e tocca 7 volte **Numero build** finché compare "Ora sei
-   uno sviluppatore".
-   - Samsung: Info telefono → Informazioni software → Numero build
-   - Xiaomi, Redmi, POCO: Info telefono → Versione MIUI / Versione HyperOS
-   - OnePlus, Oppo, Realme: Info dispositivo → Versione → Numero build
-2. Torna indietro, apri **Opzioni sviluppatore** e attiva **Debug USB**.
-   - Xiaomi: attiva anche **Debug USB (impostazioni di sicurezza)**.
-3. Collega il cavo. Sul telefono compare "Consentire il debug USB?": spunta **Consenti
-   sempre** e tocca **Consenti**.
+| | what you need |
+| --- | --- |
+| **Windows** | [Python](https://www.python.org/downloads/) (during setup tick **"Add python.exe to PATH"**) and [Git for Windows](https://git-scm.com/download/win) (keep the default options) |
+| **Mac** | nothing: if Python is missing, the Mac offers to install it the first time |
+| **Linux** | nothing on most distributions (Python 3 is already there) |
 
-**Senza cavo (Android 11+):** in Opzioni sviluppatore apri **Debug wireless → Associa
-dispositivo con codice di associazione**, poi sul computer:
+You don't need to install adb, the program that talks to the phone: the app downloads it
+from Google for you.
 
-```
-adb pair <IP>:<porta di associazione>     # e inserisci il codice
-adb connect <IP>:<porta>                  # la porta mostrata nella schermata Debug wireless
-```
+**3. Open the app** from the Phone Detox folder:
 
-Usa quell'indirizzo come primo argomento di ogni script. La porta cambia a ogni riavvio: per
-la pulizia il cavo è più comodo, perché dopo ogni gruppo si riavvia.
+| | how |
+| --- | --- |
+| **Windows** | double-click `start-windows.bat` |
+| **Mac** | double-click `start-mac.command` (the first time: right-click → **Open**) |
+| **Linux** | open a terminal in the folder and type `sh start-linux.sh` |
 
-## 2. Scegli come procedere
+A small window stays open (keep it open) and the app opens in your browser, in English or
+Italian.
 
-Tre strade, dalla più guidata alla più manuale. In tutte il primo passo è capire con
-precisione che telefono è collegato (vedi [Identificare il telefono](#identificare-il-telefono)).
+**4. Follow the steps on the page.** It guides you through everything:
 
-### 2a. Con Claude Code
+1. **Before you start**: what can go wrong and a reminder to back up.
+2. **Connect**: how to turn on USB debugging on the phone (with instructions for Samsung,
+   Xiaomi, OnePlus and others). The page notices the phone by itself, and tells you what to
+   do if it asks for permission. Wi-Fi works too.
+3. **Your phone**: the exact model, which you confirm by looking at Settings → About phone.
+4. **Apps**: every app on the phone in plain words, sorted into *Recommended*, *You may need*,
+   *Yours*, *Unknown*, *System*. Tick up to 10, or press **Choose the safest for me**.
+   Then restart the phone and test it with a checklist. If something's wrong, one button
+   turns the group back on.
+5. **Done**: free memory before and after, and a reminder to turn USB debugging off.
 
-Scarica questo repository, apri [Claude Code](https://claude.com/claude-code) nella sua
-cartella e scrivi:
+If you close the app halfway, it picks up from where you were.
 
-```
-/pulisci
-```
+## Other ways to use it
 
-Claude legge da solo [CLAUDE.md](CLAUDE.md), con la procedura e le regole: ti avvisa dei
-rischi, identifica il modello, cerca online le app note per quel telefono, ti propone gruppi
-di app e aspetta il tuo sì per ognuno. Ci sono anche `/identifica` e `/annulla`.
+### With Claude Code
 
-Il prompt completo da incollare, utile anche con Codex, Gemini CLI o Cursor, è in
-[PROMPT.md](PROMPT.md).
+Download this repository, open [Claude Code](https://claude.com/claude-code) in its folder
+and type `/pulisci`. Claude reads [CLAUDE.md](CLAUDE.md), which has the procedure and the
+rules. It warns you about the risks, identifies the model, looks up the apps known for that
+phone, proposes groups of apps and waits for your yes on each one. There's also
+`/identifica` (identify) and `/annulla` (undo). [PROMPT.md](PROMPT.md) has the full prompt
+for Codex, Gemini CLI or Cursor.
 
-La chat di Claude nell'app o su claude.ai non può farlo: gira sui server di Anthropic e non
-vede il tuo telefono. Serve qualcosa che giri sul tuo computer.
+Claude in the claude.ai chat can't do this: it runs on Anthropic's servers and can't see your
+phone. You need something that runs on your computer.
 
-### 2b. Procedura guidata, senza AI
+### In the terminal
 
-```
-sh guida.sh
-```
-
-Fa tutto a domande: controlla il collegamento (e ti aiuta se il telefono non si vede, anche
-in Wi-Fi), identifica il modello e te lo fa confermare, ti mostra le app che si possono
-spegnere con un numero accanto, spegne quelle che scegli, riavvia il telefono, ti dice cosa
-provare e, se qualcosa non va, riaccende il gruppo. Alla fine mostra la memoria libera prima
-e dopo. Puoi fermarti quando vuoi e riprendere dopo.
-
-### 2c. A mano
+The scripts need a POSIX `sh` and `adb` (Mac: `brew install android-platform-tools`; Linux:
+`sudo apt install adb`; Windows: Git Bash plus the
+[SDK Platform Tools](https://developer.android.com/tools/releases/platform-tools)). Their
+messages are in Italian.
 
 ```
-sh identify.sh                 # che telefono è, con quanta certezza
-sh info.sh                     # memoria libera, app predefinite, avvisi per la marca
-sh candidates.sh               # ogni app con un verdetto (non cambia niente)
-sh disable.sh <app> <app> ...  # spegne, chiedendo conferma
-sh undo.sh                     # riaccende tutto quello che hai spento
-sh check.sh --fix              # dopo un aggiornamento, rispegne ciò che è tornato
+sh guida.sh                    # guided wizard: asks questions, does everything
+sh identify.sh                 # which phone it is, and how sure
+sh info.sh                     # free memory, default apps, brand warnings
+sh candidates.sh               # every app with a verdict (changes nothing)
+sh disable.sh <app> <app> ...  # turns off, asking for confirmation
+sh undo.sh                     # turns back on everything you turned off
+sh check.sh --fix              # after a system update, turns off what came back
 ```
 
-Con più dispositivi collegati, o in Wi-Fi, metti il telefono come primo argomento:
-`sh candidates.sh 192.168.1.20:41234` oppure `sh candidates.sh R58N123ABC` (il seriale di
+With several devices connected, or over Wi-Fi, put the phone first:
+`sh candidates.sh 192.168.1.20:41234` or `sh candidates.sh R58N123ABC` (the serial from
 `adb devices`).
 
-## Identificare il telefono
+## How the apps are sorted
 
-Ogni produttore preinstalla app diverse, e cambiano anche tra varianti dello stesso modello
-(europea, americana, operatore). Per questo si parte da `identify.sh`:
+| in the app | in the scripts | meaning |
+| --- | --- | --- |
+| System | `mai` | The phone needs it, or it's a default app, the keyboard in use, a device administrator, or it saved a Wi-Fi network, or Android always keeps it on. **Refused.** |
+| You may need | `serve` | A feature you might use: alarms, payments, Android Auto, accessibility… Off only if you don't use it. |
+| Recommended | `via` | Usually safe to turn off. |
+| Unknown | `dubbio` | Unknown: stays on unless you know what it is (expert mode). |
+| Yours | `tua` | You installed it: uninstall it from Settings if you don't need it. |
 
-```
-== Il tuo telefono
-   samsung Galaxy A54 5G (SM-A546B)
-   Certezza        confermato - confermato dall'utente
-   Codice modello  SM-A546B
-   Serie           Galaxy A, variante europea/internazionale
-   Nome in codice  a54x
-   Chip            Samsung s5e8835
-   RAM             8027 MB
-== Sistema
-   Android         14 (SDK 34)
-   Interfaccia     One UI 6.1
-   Patch sicurezza 2026-09-01
-   Regione/CSC     ITV
-   Operatore SIM   TIM
-== Per cercarlo online
-   "Galaxy A54 5G SM-A546B" debloat
-```
+[docs/cleanup.md](docs/cleanup.md) explains the rules behind the verdicts and what to test
+after each group.
 
-Android non scrive il nome commerciale sempre nello stesso posto. Lo script prova tutte le
-proprietà note (Xiaomi, Oppo, OnePlus, Realme, vivo, Motorola, Asus...) e dice quanto è sicuro:
+Each phone is identified precisely (brand, model number, variant, system version), because
+manufacturers preinstall different apps on different variants of the same model. When the
+name isn't certain, you confirm it from Settings → About phone.
 
-| certezza | da dove viene |
-| --- | --- |
-| `confermato` | l'hai confermato tu, guardando Impostazioni > Info telefono |
-| `alta` | il produttore scrive il nome commerciale in una proprietà di sistema (o è un Pixel) |
-| `media` | dal nome del dispositivo, che però si può cambiare a mano |
-| `bassa` | c'è solo il codice modello: va confermato |
+## Turning things back on
 
-Se non è `alta` o `confermato`, apri **Impostazioni > Info telefono**, controlla che il numero
-di modello sia lo stesso e salva il nome:
+In the app: the **Turn on** button next to each app, **Something's wrong** after a group, or
+the buttons on the Done page. In the terminal:
 
 ```
-sh identify.sh --conferma "Galaxy A54 5G"
+sh undo.sh                        # everything turned off with Phone Detox
+sh undo.sh com.example.app        # just this one
+sh undo.sh --all                  # rescue: every app that's off or removed, by anyone
 ```
 
-Per i Samsung lo script ricava comunque la serie e la variante dal codice (SM-A = Galaxy A,
-finale B = europea). `sh identify.sh --kv` dà le stesse informazioni come righe
-`CHIAVE=valore`, ed è quello che usa Claude. La scheda resta salvata in
-`changes/<telefono>.identita.txt`.
+**Phone stuck restarting?** If USB debugging was allowed, adb often answers for a few seconds
+during boot. Plug in the cable and run `sh undo.sh --all`: it waits for the phone and turns
+everything back on. If adb never answers, the last resort is a factory reset from recovery.
 
-## I verdetti di `candidates.sh`
+## FAQ
 
-```
-mai     on     com.google.android.gms              Google Play Services
-mai     on     com.sec.android.app.launcher        Schermata Home Samsung (app predefinita: HOME)
-via     on     com.samsung.android.bixby.agent     Bixby
-via     on     com.facebook.appmanager             Installer nascosto di Facebook
-dubbio  on     com.vendor.qualcosa
-tua     on     com.whatsapp
-```
+**Do I need root?** No. Everything goes through adb and applies to the main user. The system
+partition is never touched, and a factory reset brings the phone back as it was.
 
-| verdetto | significato |
-| --- | --- |
-| `mai` | serve al telefono, è un'app predefinita o la tastiera in uso, è un amministratore del dispositivo, ha salvato il Wi-Fi, o Android la tiene sempre accesa. `disable.sh` la rifiuta. |
-| `serve` | porta una funzione: sveglie, pagamenti, Android Auto, accessibilità... Via solo se non la usi. |
-| `via` | di solito si può spegnere. |
-| `dubbio` | sconosciuta: lasciala accesa finché non sai cos'è. |
-| `tua` | installata da te: disinstallala dalle Impostazioni se non ti serve. |
+**Will the phone be faster?** On cheap or old phones with lots of bloatware, usually yes:
+fewer background apps, more free memory and fewer advertising notifications. On a Pixel
+there's little to remove. The app shows free memory before and after.
 
-[docs/pulizia.md](docs/pulizia.md) spiega le regole dietro i verdetti e cosa provare dopo ogni
-gruppo.
-
-## `disable.sh`
-
-```
-sh disable.sh com.samsung.android.bixby.agent com.samsung.android.app.tips
-sh disable.sh -f lista.txt         # un pacchetto per riga
-YES=1 sh disable.sh ...            # senza conferma (per Claude Code, dopo il tuo sì in chat)
-UNINSTALL=1 sh disable.sh ...      # per le app che il telefono non lascia spegnere
-```
-
-Senza terminale interattivo e senza `YES=1` fa solo una prova a vuoto. Ogni modifica finisce
-in `changes/<telefono>.txt` sul computer e in una copia sul telefono
-(`/data/local/tmp/phone-detox.txt`), così `undo.sh` funziona anche da un altro computer.
-
-`UNINSTALL=1` usa `pm uninstall -k --user 0`: l'app sparisce per te ma resta nel sistema, e
-`undo.sh` la rimette senza reset. Servirà soprattutto su Samsung, OnePlus, Oppo e Realme
-recenti.
-
-## Annullare
-
-```
-sh undo.sh                        # tutto quello fatto con disable.sh
-sh undo.sh com.esempio.app        # solo questa
-sh undo.sh --all                  # soccorso: ogni app spenta o tolta, da chiunque
-```
-
-**Il telefono si riavvia in continuazione?** Se il debug USB era autorizzato, adb spesso
-risponde per qualche secondo durante l'avvio. Collega il cavo e lancia `sh undo.sh --all`:
-aspetta il telefono e riaccende tutto. Se adb non risponde mai, resta il ripristino di
-fabbrica dalla recovery.
-
-## Domande
-
-**Serve il root?** No. Tutto passa da adb e vale per l'utente principale. Il sistema non viene
-toccato, e un ripristino di fabbrica riporta il telefono com'era.
-
-**Il telefono va più veloce?** Su telefoni economici o vecchi con tanto bloatware, di solito
-sì: meno app in background, più memoria libera e meno notifiche pubblicitarie. Su un Pixel
-c'è poco da togliere. `info.sh` mostra la memoria libera prima e dopo.
-
-**Perché non usare direttamente Universal Android Debloater?**
+**Why not use Universal Android Debloater?**
 [UAD-ng](https://github.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation)
-è ottimo, ha un'interfaccia grafica e liste molto più ampie: se preferisci un'app, usa quello.
-Questo progetto è pensato per essere guidato da un agente AI o dal terminale, ha protezioni
-legate al tuo telefono (app predefinite, tastiera in uso, amministratori, chi ha salvato il
-Wi-Fi, app PERSISTENT) e tiene una lista per annullare e per riapplicare dopo gli
-aggiornamenti.
+is excellent and has much larger lists. Phone Detox is smaller and more guided. It has
+protections tied to your phone: default apps, keyboard in use, administrators, whoever saved
+the Wi-Fi, PERSISTENT apps. It makes you test after each group, and keeps a list to undo
+changes and to reapply them after updates.
 
-**Un aggiornamento ha riacceso qualcosa.** `sh check.sh` controlla, `sh check.sh --fix`
-rimette a posto.
+**An update turned something back on.** Open the app and press **Check** on the Done page, or
+run `sh check.sh --fix`.
 
-**App bancarie e pagamenti.** Non spegnere Play Services, NFC, il wallet o i servizi
-dell'operatore. Dopo ogni gruppo apri l'app della banca e, se lo usi, prova un pagamento.
+**Banking apps and payments.** Never turn off Play Services, NFC, the wallet or carrier
+services. After each group, open your banking app and, if you use it, try a payment.
 
-**Telefono aziendale o in finanziamento.** Lascia stare le app di gestione e gli
-amministratori del dispositivo. `info.sh` ti dice se il telefono è gestito.
+**Work or financed phone.** Leave management apps and device administrators alone. The app
+tells you if the phone is managed.
 
-**Spegni il debug quando hai finito.** Con il Debug USB o wireless acceso, un computer
-autorizzato può controllare il telefono. Riaccendilo solo quando ti serve.
+**Turn off debugging when you're done.** With USB or wireless debugging on, an authorised
+computer can control the phone. Turn it on only when you need it.
 
-## Per chi sviluppa
+**Is the app safe to run?** It's a small Python server that listens only on your computer
+(127.0.0.1), rejects requests without a random token and runs only the scripts in this
+folder. The only download is adb, from Google's official address.
 
-Gli script sono shell POSIX, senza dipendenze oltre ad `adb`. Le liste di app (`mai`, `serve`,
-`via`) e i nomi in italiano stanno in `lib.sh`.
+## For developers
+
+The scripts are POSIX shell with no dependencies besides `adb`. App lists (`mai`, `serve`,
+`via`) and Italian names live in `lib.sh`; English names in `ui/app_names_en.json`.
 
 ```
-sh ci/test.sh       # prova tutti gli script su un telefono simulato, senza telefono vero
+sh ci/test.sh       # tests every script and the app on a simulated phone
 shellcheck -x -s sh *.sh ci/*.sh
 ```
 
-Il telefono simulato (`ci/fake-adb/`) è un finto `adb` che risponde ai comandi usati dagli
-script. Per aggiungere un caso, modifica il telefono finto in `ci/test.sh`.
+- `ui/phone_detox_ui.py` is the local server (Python standard library only) that runs the
+  scripts. `ui/index.html` is the page, with every text in Italian and English in the `T`
+  dictionary.
+- `ci/fake-adb/` is a fake `adb` that answers the commands the scripts use. To add a case,
+  change the fake phone in `ci/test.sh`.
+- Agent instructions are in `CLAUDE.md` (other agents find them via `AGENTS.md`).
+  `.claude/settings.json` allows only the read-only scripts without confirmation and blocks
+  destructive adb commands.
 
-Le istruzioni per gli agenti sono in `CLAUDE.md` (Codex e altri le trovano tramite
-`AGENTS.md`); i comandi `/pulisci`, `/identifica` e `/annulla` in `.claude/commands/`.
-`.claude/settings.json` lascia lanciare senza conferma solo gli script che non cambiano niente
-e blocca i comandi adb distruttivi.
+Pull requests are welcome, especially for brand lists: include the model, Android version and
+what you tested after turning the app off.
 
-Pull request benvenute, soprattutto per le liste per marca: indica modello, versione di
-Android e cosa hai provato dopo aver spento l'app.
+## Credits and license
 
-## Crediti e licenza
-
-Basato su [tv-detox](https://github.com/Ansub/tv-detox) di Ansub Khan (licenza MIT): l'idea,
-la struttura degli script e le regole di base (spegnere invece di cancellare, PERSISTENT,
-chi ha salvato il Wi-Fi) vengono da lì. Liste di app ricavate in parte da
+Based on [tv-detox](https://github.com/Ansub/tv-detox) by Ansub Khan (MIT license). The idea,
+the script structure and the basic rules come from there: turn off instead of deleting,
+PERSISTENT apps, whoever saved the Wi-Fi. App lists partly derived from
 [Universal Android Debloater Next Generation](https://github.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation).
 
-Licenza MIT, vedi [LICENSE](LICENSE).
+MIT license, see [LICENSE](LICENSE).

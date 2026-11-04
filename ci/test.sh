@@ -191,6 +191,13 @@ expect "riconosce il telefono"      'Galaxy A54 5G che hai già confermato'     
 expect "annulla il gruppo se non va" 'accesa +com.samsung.android.bixby.agent'         "$out"
 off com.samsung.android.bixby.agent && ko "Bixby riaccesa" || ok "Bixby riaccesa"
 
+echo "interfaccia grafica"
+if command -v python3 >/dev/null 2>&1; then
+  python3 "$ROOT/ci/test_ui.py" || fails=$((fails + 1))
+else
+  echo "  salto: manca python3"
+fi
+
 echo
 if [ "$fails" -gt 0 ]; then echo "$fails test falliti."; exit 1; fi
 echo "Tutti i test passati."
