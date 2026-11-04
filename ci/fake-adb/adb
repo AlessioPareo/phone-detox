@@ -1,0 +1,23 @@
+#!/bin/sh
+# Un adb finto per i test: un telefono simulato i cui dati stanno in $FAKE_PHONE.
+# Gestisce solo i comandi che usano gli script di questo progetto.
+S=$FAKE_PHONE
+[ -n "$S" ] || { echo "FAKE_PHONE non impostato" >&2; exit 1; }
+case "$1" in
+  wait-for-device) exit 0 ;;
+  devices) echo "List of devices attached"; echo "FAKE123456	device"; exit 0 ;;
+  connect) echo "connected to $2"; exit 0 ;;
+  -s) shift 2 ;;
+esac
+case "$1" in
+  get-state) echo device ;;
+  wait-for-device) ;;
+  get-serialno) echo FAKE123456 ;;
+  shell)
+    shift
+    cmd=$(printf '%s ' "$@" | sed "s|/data/local/tmp|$S/tmp|g")
+    mkdir -p "$S/tmp"
+    PATH="$(dirname "$0")/bin:$PATH" sh -c "$cmd"
+    ;;
+  *) echo "adb finto: comando non gestito: $*" >&2; exit 1 ;;
+esac

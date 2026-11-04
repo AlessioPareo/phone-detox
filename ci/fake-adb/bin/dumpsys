@@ -1,0 +1,7 @@
+#!/bin/sh
+S=$FAKE_PHONE
+case "$1" in
+  package) while IFS='	' read -r p f; do printf '  Package [%s] (abc):\n    userId=1000\n    pkgFlags=[ %s ]\n' "$p" "$f"; done < "$S/flags" ;;
+  wifi) echo "Wi-Fi is enabled"; cat "$S/wifi" 2>/dev/null; true ;;
+  device_policy) cat "$S/device_policy" 2>/dev/null; true ;;
+esac

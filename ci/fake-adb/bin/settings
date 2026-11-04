@@ -1,0 +1,7 @@
+#!/bin/sh
+S=$FAKE_PHONE
+f="$S/settings_$2_$3"
+case "$1" in
+  get) if [ -f "$f" ]; then cat "$f"; else echo null; fi ;;
+  put) echo "$4" > "$f" ;;
+esac

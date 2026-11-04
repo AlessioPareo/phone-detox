@@ -1,0 +1,3 @@
+#!/bin/sh
+grep "^$1=" "$FAKE_PHONE/props" 2>/dev/null | cut -d= -f2-
+true

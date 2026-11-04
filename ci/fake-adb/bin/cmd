@@ -1,0 +1,7 @@
+#!/bin/sh
+S=$FAKE_PHONE
+case "$1 $2" in
+  "role get-role-holders") r=${5#android.app.role.}; cat "$S/role_$r" 2>/dev/null; true ;;
+  "package install-existing") exec pm install-existing "$3" "$4" "$5" ;;
+  *) echo "cmd finto: $*" >&2; exit 1 ;;
+esac

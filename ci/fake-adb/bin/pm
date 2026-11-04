@@ -1,0 +1,28 @@
+#!/bin/sh
+S=$FAKE_PHONE
+touch "$S/off" "$S/removed" "$S/third"
+sub() { grep -vxF -f "$2" "$1" 2>/dev/null || cat "$1"; }
+add() { grep -qxF "$2" "$1" || echo "$2" >> "$1"; }
+del() { grep -vxF "$2" "$1" > "$1.t" || true; mv "$1.t" "$1"; }
+case "$1" in
+  list)
+    shift 2; mode=; filter=
+    for a in "$@"; do case "$a" in -*) mode=$a ;; *) filter=$a ;; esac; done
+    case "$mode" in
+      -u) out=$(cat "$S/all") ;;
+      -d) out=$(sub "$S/off" "$S/removed") ;;
+      -3) out=$(sub "$S/third" "$S/removed") ;;
+      *)  out=$(sub "$S/all" "$S/removed") ;;
+    esac
+    printf '%s\n' "$out" | grep -v '^$' | grep -F -- "$filter" | sed 's/^/package:/' ;;
+  disable-user)
+    p=$4
+    if grep -qxF "$p" "$S/refuse" 2>/dev/null; then
+      echo "Exception occurred while executing 'disable-user': java.lang.SecurityException: Shell cannot change component state for $p to 3"; exit 0
+    fi
+    add "$S/off" "$p"; echo "Package $p new state: disabled-user" ;;
+  enable) del "$S/off" "$2"; echo "Package $2 new state: enabled" ;;
+  uninstall) p=$5; add "$S/removed" "$p"; echo Success ;;
+  install-existing) p=$4; del "$S/removed" "$p"; echo "Package $p installed for user: 0" ;;
+  *) echo "pm finto: $*" >&2; exit 1 ;;
+esac
