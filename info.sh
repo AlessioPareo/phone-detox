@@ -8,16 +8,9 @@ set -e
 
 connect "$1"
 
-MAKER=$(prop ro.product.manufacturer)
-MODEL=$(prop ro.product.model)
-RELEASE=$(prop ro.build.version.release)
-SDK=$(prop ro.build.version.sdk)
-SKIN=
-ONEUI=$(prop ro.build.version.oneui)
-[ -z "$ONEUI" ] || SKIN="One UI $((ONEUI / 10000)).$((ONEUI / 100 % 100))"
-[ -z "$(prop ro.miui.ui.version.name)" ] || SKIN="MIUI $(prop ro.miui.ui.version.name)"
-[ -z "$(prop ro.mi.os.version.name)" ] || SKIN="HyperOS $(prop ro.mi.os.version.name)"
-[ -z "$(prop ro.build.version.oplusrom)" ] || SKIN="ColorOS/OxygenOS $(prop ro.build.version.oplusrom)"
+kv=$(identify)
+v() { printf '%s\n' "$kv" | sed -n "s/^$1=//p"; }
+SKIN=$(v SKIN); MARKET=$(v MARKET)
 mem() { sh_dev cat /proc/meminfo | sed -n "s/^$1:[[:space:]]*\([0-9]*\) kB/\1/p"; }
 TOTAL=$(mem MemTotal); AVAIL=$(mem MemAvailable)
 ALL=$(sh_dev pm list packages | grep -c '^package:' || true)
@@ -26,7 +19,8 @@ U=$(sh_dev pm list packages -u | grep -c '^package:' || true)
 MINE=$(sh_dev pm list packages -3 | grep -c '^package:' || true)
 
 echo "== Telefono"
-echo "   $MAKER $MODEL, Android $RELEASE (SDK $SDK)${SKIN:+, $SKIN}"
+echo "   $(v MAKER) ${MARKET:+$MARKET }($(v MODEL)), Android $(v ANDROID)${SKIN:+, $SKIN}"
+[ "$(v CONFIDENCE)" = alta ] || [ "$(v CONFIDENCE)" = confermato ] || echo "   Nome non certo: lancia identify.sh per confermarlo."
 [ -z "$TOTAL" ] || echo "   RAM: $((TOTAL / 1024)) MB, libera ora $((AVAIL / 1024)) MB"
 echo "   $ALL app ($MINE installate da te), $OFF spente, $((U - ALL)) tolte per l'utente"
 
@@ -39,16 +33,16 @@ ime=$(sh_dev settings get secure default_input_method 2>/dev/null)
 printf '   %-9s %s\n' TASTIERA "${ime%%/*}"
 
 echo "== Da sapere su questo telefono"
-case "$(echo "$MAKER" | tr 'A-Z' 'a-z')" in
+case "$(v FAMILY)" in
   samsung)
     echo "   Samsung: alcune app di sistema non si lasciano disattivare via adb; disable.sh"
     echo "   te lo dice e puoi usare UNINSTALL=1 (reversibile con undo.sh)."
     echo "   Lascia stare Knox Guard e Trova dispositivo se il telefono è in finanziamento o aziendale." ;;
-  xiaomi|redmi|poco)
+  xiaomi)
     echo "   Xiaomi: attiva anche \"Debug USB (impostazioni di sicurezza)\" nelle Opzioni sviluppatore."
     echo "   Non toccare mai com.miui.securitycenter: su alcuni modelli il telefono non riparte."
     echo "   Le pubblicità di sistema stanno in com.miui.msa.global e com.miui.analytics." ;;
-  oneplus|oppo|realme)
+  oplus)
     echo "   OnePlus/Oppo/Realme: dalla ColorOS 12 molte app di sistema vanno tolte con UNINSTALL=1." ;;
   google)
     echo "   Pixel: poco da pulire. Il guadagno vero è su app Google che non usi." ;;

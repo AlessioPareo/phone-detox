@@ -56,6 +56,10 @@ ro.serialno=FAKE123456
 ro.build.version.release=14
 ro.build.version.sdk=34
 ro.build.version.oneui=60100
+ro.product.brand=samsung
+ro.product.device=a54x
+ro.csc.sales_code=ITV
+sys.boot_completed=1
 EOF
 
 fails=0
@@ -83,9 +87,31 @@ expect "sconosciuta è dubbio"       '^dubbio +on +com.vendor.mystery'          
 expect "WhatsApp è tua"             '^tua +on +com.whatsapp'                            "$out"
 expect "riepilogo"                  '^mai [0-9]+ \| serve [0-9]+ \| via 4 \| dubbio 2 \| tua 1' "$out"
 
+echo "identify.sh"
+out=$(sh "$ROOT/identify.sh" 2>&1)
+expect "solo codice: certezza bassa" 'Certezza +bassa'                                  "$out"
+expect "serie Samsung dal codice"   'Galaxy A, variante europea'                        "$out"
+expect "interfaccia One UI"         'One UI 6\.1'                                       "$out"
+expect "chiede di confermare"       'identify.sh +--conferma'                           "$out"
+echo "Galaxy A54 5G" > "$P/settings_global_device_name"
+out=$(sh "$ROOT/identify.sh" --kv 2>&1)
+expect "nome dal dispositivo"       '^MARKET=Galaxy A54 5G$'                            "$out"
+expect "certezza media"             '^CONFIDENCE=media$'                                "$out"
+expect "famiglia samsung"           '^FAMILY=samsung$'                                  "$out"
+expect "regione CSC"                '^REGION=ITV$'                                      "$out"
+sh "$ROOT/identify.sh" --conferma "Galaxy A54 5G" >/dev/null
+out=$(sh "$ROOT/identify.sh" --kv 2>&1)
+expect "confermato dall'utente"     '^CONFIDENCE=confermato$'                           "$out"
+out=$(FAKE_PHONE="$WORK/xiaomi" sh -c 'mkdir -p "$FAKE_PHONE"; printf "android\n" > "$FAKE_PHONE/all"; printf "ro.product.manufacturer=Xiaomi\nro.product.brand=Redmi\nro.product.model=23090RA98G\nro.product.marketname=Redmi Note 13 Pro\nro.product.device=garnet\nro.mi.os.version.name=OS1.0\nro.product.mod_device=garnet_eea_global\nro.serialno=X2\n" > "$FAKE_PHONE/props"; sh "$1/identify.sh" --kv' _ "$ROOT" 2>&1)
+expect "Xiaomi: nome dalla proprietà" '^MARKET=Redmi Note 13 Pro$'                       "$out"
+expect "Xiaomi: certezza alta"      '^CONFIDENCE=alta$'                                 "$out"
+expect "Xiaomi: HyperOS"            '^SKIN=HyperOS 1\.0$'                               "$out"
+expect "Xiaomi: variante"           '^REGION=garnet_eea_global$'                        "$out"
+expect "Xiaomi: ricerca con codename" '^QUERY=Redmi Note 13 Pro 23090RA98G garnet$'     "$out"
+
 echo "info.sh"
 out=$(sh "$ROOT/info.sh" 2>&1)
-expect "modello"                    'samsung SM-A546B, Android 14'                      "$out"
+expect "modello"                    'samsung Galaxy A54 5G \(SM-A546B\), Android 14'    "$out"
 expect "consiglio Samsung"          'UNINSTALL=1'                                       "$out"
 
 echo "disable.sh"
@@ -104,7 +130,7 @@ if off com.google.android.gms; then ko "gms resta accesa"; else ok "gms resta ac
 out=$(YES=1 sh "$ROOT/disable.sh" FAKE123456 com.samsung.android.bixby.agent com.facebook.appmanager 2>&1)
 expect "spegne Bixby"               'spenta +com.samsung.android.bixby.agent'           "$out"
 off com.samsung.android.bixby.agent && off com.facebook.appmanager && ok "sono spente" || ko "sono spente"
-LOG=$(ls "$LOG_DIR"/*.txt)
+LOG="$LOG_DIR/samsung-SM-A546B-FAKE123456.txt"
 grep -qx 'off com.facebook.appmanager' "$LOG" && ok "lista sul computer" || ko "lista sul computer"
 grep -qx 'off com.facebook.appmanager' "$P/tmp/phone-detox.txt" && ok "lista sul telefono" || ko "lista sul telefono"
 
@@ -146,6 +172,24 @@ off com.samsung.android.app.tips && ok "non tocca ciò che era spento prima" || 
 out=$(sh "$ROOT/undo.sh" --all 2>&1)
 expect "soccorso riaccende tutto"   'accesa +com.samsung.android.app.tips'              "$out"
 [ -s "$P/off" ] && ko "nessuna app spenta" || ok "nessuna app spenta"
+
+echo "guida.sh"
+# Il nome confermato è andato via con changes/: la guida lo richiede.
+# Risposte: backup sì, modello giusto, nome giusto, app 1, procedo, niente riavvio,
+# funziona tutto, un altro gruppo sì, poi Invio per finire.
+out=$(printf 's\ns\ns\n1\ns\nn\ns\ns\n\n' | GUIDA_STDIN=1 sh "$ROOT/guida.sh" 2>&1)
+expect "chiede il numero di modello" 'Leggi SM-A546B\?'                                 "$out"
+expect "salva il nome confermato"   'questo telefono è un Galaxy A54 5G'                "$out"
+expect "elenca le app da spegnere"  ' 1\) Installer nascosto di Facebook'               "$out"
+expect "spegne quella scelta"       'spenta +com.facebook.appmanager'                   "$out"
+expect "arriva alla fine"           '7\. Fine'                                          "$out"
+off com.facebook.appmanager && ok "Facebook spenta dalla guida" || ko "Facebook spenta dalla guida"
+# Se qualcosa non va, la guida riaccende il gruppo.
+# Seconda volta: il telefono è già confermato. Bixby è la numero 2; qualcosa non va.
+out=$(printf 's\n2\ns\nn\nn\nn\n' | GUIDA_STDIN=1 sh "$ROOT/guida.sh" 2>&1)
+expect "riconosce il telefono"      'Galaxy A54 5G che hai già confermato'              "$out"
+expect "annulla il gruppo se non va" 'accesa +com.samsung.android.bixby.agent'         "$out"
+off com.samsung.android.bixby.agent && ko "Bixby riaccesa" || ok "Bixby riaccesa"
 
 echo
 if [ "$fails" -gt 0 ]; then echo "$fails test falliti."; exit 1; fi

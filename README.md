@@ -49,42 +49,47 @@ adb connect <IP>:<porta>                  # la porta mostrata nella schermata De
 Usa quell'indirizzo come primo argomento di ogni script. La porta cambia a ogni riavvio: per
 la pulizia il cavo è più comodo, perché dopo ogni gruppo si riavvia.
 
-## 2a. Con Claude Code
+## 2. Scegli come procedere
 
-Scarica questo repository, apri Claude Code nella sua cartella e incolla:
+Tre strade, dalla più guidata alla più manuale. In tutte il primo passo è capire con
+precisione che telefono è collegato (vedi [Identificare il telefono](#identificare-il-telefono)).
+
+### 2a. Con Claude Code
+
+Scarica questo repository, apri [Claude Code](https://claude.com/claude-code) nella sua
+cartella e scrivi:
 
 ```
-Aiutami a pulire il mio telefono Android dalle app inutili usando gli script
-di questa cartella. Il telefono è un <marca e modello>.
-
-1. Prima di tutto dimmi in parole semplici che spegnere app di sistema ha dei
-   rischi (funzioni rotte, nel caso peggiore un telefono che non riparte) e
-   che tu puoi sbagliare. undo.sh riaccende tutto. Chiedimi conferma e
-   ricordami di fare un backup.
-2. Collegati al telefono e lancia info.sh. Guidami in quello che devo toccare.
-3. Lancia candidates.sh e spiegami la lista in italiano semplice: cosa si può
-   spegnere, cosa serve al telefono e cosa sono le app che uso. Leggi
-   docs/pulizia.md e seguine le regole.
-4. Proponimi gruppi di 5-10 app. Per ogni gruppo aspetta il mio sì, poi usa
-   YES=1 sh disable.sh. Non spegnere mai un'app con verdetto "mai" e, nel
-   dubbio, lasciala accesa. Usa UNINSTALL=1 solo se disable.sh dice che il
-   telefono non permette di spegnerla, e chiedimelo prima.
-5. Dopo ogni gruppo dimmi di riavviare e di provare chiamate, SMS, dati,
-   Wi-Fi, Bluetooth, notifiche, fotocamera, sveglia e pagamenti. Se qualcosa
-   non va, annulla quel gruppo con undo.sh.
-6. Alla fine lancia di nuovo info.sh e mostrami la memoria libera prima e
-   dopo.
-7. Ricordami di spegnere Debug USB e Debug wireless (o tutte le Opzioni
-   sviluppatore). Li riaccendo solo per undo.sh o check.sh.
+/pulisci
 ```
+
+Claude legge da solo [CLAUDE.md](CLAUDE.md), con la procedura e le regole: ti avvisa dei
+rischi, identifica il modello, cerca online le app note per quel telefono, ti propone gruppi
+di app e aspetta il tuo sì per ognuno. Ci sono anche `/identifica` e `/annulla`.
+
+Il prompt completo da incollare, utile anche con Codex, Gemini CLI o Cursor, è in
+[PROMPT.md](PROMPT.md).
 
 La chat di Claude nell'app o su claude.ai non può farlo: gira sui server di Anthropic e non
 vede il tuo telefono. Serve qualcosa che giri sul tuo computer.
 
-## 2b. A mano
+### 2b. Procedura guidata, senza AI
 
 ```
-sh info.sh                     # cos'è il telefono, memoria libera, app predefinite
+sh guida.sh
+```
+
+Fa tutto a domande: controlla il collegamento (e ti aiuta se il telefono non si vede, anche
+in Wi-Fi), identifica il modello e te lo fa confermare, ti mostra le app che si possono
+spegnere con un numero accanto, spegne quelle che scegli, riavvia il telefono, ti dice cosa
+provare e, se qualcosa non va, riaccende il gruppo. Alla fine mostra la memoria libera prima
+e dopo. Puoi fermarti quando vuoi e riprendere dopo.
+
+### 2c. A mano
+
+```
+sh identify.sh                 # che telefono è, con quanta certezza
+sh info.sh                     # memoria libera, app predefinite, avvisi per la marca
 sh candidates.sh               # ogni app con un verdetto (non cambia niente)
 sh disable.sh <app> <app> ...  # spegne, chiedendo conferma
 sh undo.sh                     # riaccende tutto quello che hai spento
@@ -95,7 +100,53 @@ Con più dispositivi collegati, o in Wi-Fi, metti il telefono come primo argomen
 `sh candidates.sh 192.168.1.20:41234` oppure `sh candidates.sh R58N123ABC` (il seriale di
 `adb devices`).
 
-### I verdetti di `candidates.sh`
+## Identificare il telefono
+
+Ogni produttore preinstalla app diverse, e cambiano anche tra varianti dello stesso modello
+(europea, americana, operatore). Per questo si parte da `identify.sh`:
+
+```
+== Il tuo telefono
+   samsung Galaxy A54 5G (SM-A546B)
+   Certezza        confermato - confermato dall'utente
+   Codice modello  SM-A546B
+   Serie           Galaxy A, variante europea/internazionale
+   Nome in codice  a54x
+   Chip            Samsung s5e8835
+   RAM             8027 MB
+== Sistema
+   Android         14 (SDK 34)
+   Interfaccia     One UI 6.1
+   Patch sicurezza 2026-09-01
+   Regione/CSC     ITV
+   Operatore SIM   TIM
+== Per cercarlo online
+   "Galaxy A54 5G SM-A546B" debloat
+```
+
+Android non scrive il nome commerciale sempre nello stesso posto. Lo script prova tutte le
+proprietà note (Xiaomi, Oppo, OnePlus, Realme, vivo, Motorola, Asus...) e dice quanto è sicuro:
+
+| certezza | da dove viene |
+| --- | --- |
+| `confermato` | l'hai confermato tu, guardando Impostazioni > Info telefono |
+| `alta` | il produttore scrive il nome commerciale in una proprietà di sistema (o è un Pixel) |
+| `media` | dal nome del dispositivo, che però si può cambiare a mano |
+| `bassa` | c'è solo il codice modello: va confermato |
+
+Se non è `alta` o `confermato`, apri **Impostazioni > Info telefono**, controlla che il numero
+di modello sia lo stesso e salva il nome:
+
+```
+sh identify.sh --conferma "Galaxy A54 5G"
+```
+
+Per i Samsung lo script ricava comunque la serie e la variante dal codice (SM-A = Galaxy A,
+finale B = europea). `sh identify.sh --kv` dà le stesse informazioni come righe
+`CHIAVE=valore`, ed è quello che usa Claude. La scheda resta salvata in
+`changes/<telefono>.identita.txt`.
+
+## I verdetti di `candidates.sh`
 
 ```
 mai     on     com.google.android.gms              Google Play Services
@@ -117,7 +168,7 @@ tua     on     com.whatsapp
 [docs/pulizia.md](docs/pulizia.md) spiega le regole dietro i verdetti e cosa provare dopo ogni
 gruppo.
 
-### `disable.sh`
+## `disable.sh`
 
 ```
 sh disable.sh com.samsung.android.bixby.agent com.samsung.android.app.tips
@@ -188,6 +239,11 @@ shellcheck -x -s sh *.sh ci/*.sh
 
 Il telefono simulato (`ci/fake-adb/`) è un finto `adb` che risponde ai comandi usati dagli
 script. Per aggiungere un caso, modifica il telefono finto in `ci/test.sh`.
+
+Le istruzioni per gli agenti sono in `CLAUDE.md` (Codex e altri le trovano tramite
+`AGENTS.md`); i comandi `/pulisci`, `/identifica` e `/annulla` in `.claude/commands/`.
+`.claude/settings.json` lascia lanciare senza conferma solo gli script che non cambiano niente
+e blocca i comandi adb distruttivi.
 
 Pull request benvenute, soprattutto per le liste per marca: indica modello, versione di
 Android e cosa hai provato dopo aver spento l'app.

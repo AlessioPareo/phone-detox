@@ -53,7 +53,7 @@ connect() {
       fi
       if [ "$n" -gt 1 ]; then
         echo "Ci sono più dispositivi collegati. Scegli quale usare come primo argomento:" >&2
-        printf '  %s\n' "$list" >&2
+        adb devices -l 2>/dev/null | tr -d '\r' | awk 'NR>1 && $2!="" {m=""; for (i=3;i<=NF;i++) if ($i ~ /^model:/) m=substr($i,7); print "  " $1 "  " $2 "  " m}' >&2
         exit 2
       fi
       PHONE=${list%% *} ;;
@@ -99,6 +99,137 @@ is_off() { sh_dev pm list packages -d "$1" | grep -Fqx "package:$1"; }
 # 0 se c'è ancora nel sistema ma è stato tolto per l'utente 0 (pm uninstall --user 0).
 is_removed() {
   sh_dev pm list packages -u "$1" | grep -Fqx "package:$1" && ! installed "$1"
+}
+
+# ---------------------------------------------------------------------------------------------
+# Identificazione. Scrive righe CHIAVE=valore che descrivono il telefono collegato.
+#
+# Android non ha un unico posto con il nome commerciale ("Galaxy A54 5G", "Redmi Note 13 Pro"):
+# ogni produttore lo mette in una proprietà diversa, o non lo mette affatto. Qui si provano
+# tutte quelle note, e si dice quanto è affidabile il risultato:
+#   confermato  l'utente ha confermato il nome (salvato con identify.sh --conferma)
+#   alta        il produttore scrive il nome commerciale in una proprietà di sistema
+#   media       ricavato dal nome del dispositivo, che però l'utente può aver cambiato
+#   bassa       c'è solo il codice modello (es. SM-A546B): va confermato a mano
+# ---------------------------------------------------------------------------------------------
+
+# Prima proprietà non vuota tra quelle indicate, dal file di getprop già letto.
+_firstprop() { # file, chiavi...
+  _f=$1; shift
+  for _k in "$@"; do
+    _ke=$(printf '%s' "$_k" | sed 's/\./\\./g')
+    _v=$(sed -n "s/^\[$_ke\]: \[\(.*\)\]$/\1/p" "$_f" | head -1)
+    case "$_v" in ""|unknown|null) ;; *) printf '%s\n' "$_v"; return 0 ;; esac
+  done
+  return 1
+}
+
+identity_file() { mkdir -p "$LOG_DIR"; printf '%s/%s.identita.txt\n' "$LOG_DIR" "$(device_id)"; }
+
+identify() {
+  _pf=$(mktemp 2>/dev/null || mktemp -t phonedetox)
+  sh_dev getprop > "$_pf" || { rm -f "$_pf"; lost; }
+  gp() { _firstprop "$_pf" "$@" || true; }
+
+  MAKER=$(gp ro.product.manufacturer ro.product.vendor.manufacturer ro.product.system.manufacturer)
+  BRAND=$(gp ro.product.brand ro.product.vendor.brand)
+  MODEL=$(gp ro.product.model ro.product.vendor.model ro.product.odm.model ro.product.system.model)
+  DEVICE=$(gp ro.product.device ro.product.vendor.device ro.build.product)
+  NAME=$(gp ro.product.name ro.product.vendor.name)
+  MARKET=$(gp ro.product.marketname ro.product.vendor.marketname ro.product.odm.marketname \
+    ro.vendor.oplus.market.name ro.vendor.oplus.market.enname ro.oppo.market.name ro.display.series \
+    ro.config.marketing_name ro.vivo.market.name ro.asus.product.mkt_name ro.product.odm.cert.model)
+  maker_lc=$(printf '%s' "$MAKER" | tr 'A-Z' 'a-z')
+  brand_lc=$(printf '%s' "$BRAND" | tr 'A-Z' 'a-z')
+
+  CONFIDENCE=bassa; SOURCE="codice modello"
+  if [ -n "$MARKET" ]; then CONFIDENCE=alta; SOURCE="proprietà del produttore"
+  elif [ "$maker_lc" = google ]; then MARKET=$MODEL; CONFIDENCE=alta; SOURCE="modello Google"
+  else
+    # Il nome che il telefono mostra in Info telefono e via Bluetooth, se non è stato cambiato.
+    devname=$(sh_dev settings get global device_name 2>/dev/null)
+    case "$devname" in ""|null) ;; *)
+      MARKET=$devname; CONFIDENCE=media; SOURCE="nome del dispositivo (modificabile dall'utente)" ;;
+    esac
+  fi
+
+  # Famiglia: quali regole e consigli valgono.
+  case "$maker_lc $brand_lc" in
+    *samsung*) FAMILY=samsung ;;
+    *xiaomi*|*redmi*|*poco*) FAMILY=xiaomi ;;
+    *oneplus*|*oppo*|*realme*) FAMILY=oplus ;;
+    *google*) FAMILY=google ;;
+    *motorola*|*lenovo*) FAMILY=motorola ;;
+    *huawei*) FAMILY=huawei ;;
+    *honor*) FAMILY=honor ;;
+    *vivo*|*iqoo*) FAMILY=vivo ;;
+    *nothing*) FAMILY=nothing ;;
+    *) FAMILY=altro ;;
+  esac
+
+  # Samsung: il codice dice la serie e la variante anche quando il nome manca.
+  SERIES=
+  if [ "$FAMILY" = samsung ]; then
+    case "$MODEL" in
+      SM-S*) SERIES="Galaxy S (dal 2022)" ;;
+      SM-G*) SERIES="Galaxy S fino al 2021, o un altro Galaxy" ;;
+      SM-A*) SERIES="Galaxy A" ;;
+      SM-M*) SERIES="Galaxy M" ;;
+      SM-E*) SERIES="Galaxy F" ;;
+      SM-F*) SERIES="Galaxy Z (Fold o Flip)" ;;
+      SM-N*) SERIES="Galaxy Note" ;;
+      SM-T*|SM-X*|SM-P*) SERIES="Galaxy Tab (tablet)" ;;
+      SM-R*) SERIES="Galaxy Watch o Buds" ;;
+    esac
+    case "$MODEL" in
+      *B|*B/DS) SERIES="${SERIES:+$SERIES, }variante europea/internazionale" ;;
+      *U|*U1) SERIES="${SERIES:+$SERIES, }variante USA" ;;
+      *F|*F/DS|*FN) SERIES="${SERIES:+$SERIES, }variante internazionale" ;;
+      *N) SERIES="${SERIES:+$SERIES, }variante coreana" ;;
+    esac
+  fi
+
+  SKIN=
+  _oneui=$(gp ro.build.version.oneui)
+  [ -z "$_oneui" ] || SKIN="One UI $((_oneui / 10000)).$((_oneui / 100 % 100))"
+  _v=$(gp ro.mi.os.version.name); [ -z "$_v" ] || SKIN="HyperOS ${_v#OS}"
+  if [ -z "$_v" ]; then _v=$(gp ro.miui.ui.version.name); [ -z "$_v" ] || SKIN="MIUI ${_v#V}"; fi
+  _v=$(gp ro.build.version.oplusrom ro.build.version.opporom); [ -z "$_v" ] || SKIN="ColorOS/OxygenOS ${_v#V}"
+  _v=$(gp ro.build.version.realmeui); [ -z "$_v" ] || SKIN="realme UI ${_v#V}"
+  _v=$(gp ro.vivo.os.version); [ -z "$_v" ] || SKIN="Funtouch/OriginOS $_v"
+  _v=$(gp ro.build.version.emui); [ -z "$_v" ] || SKIN="$_v"
+  _v=$(gp ro.build.version.magic); [ -z "$_v" ] || SKIN="MagicOS $_v"
+
+  ANDROID=$(gp ro.build.version.release)
+  SDK=$(gp ro.build.version.sdk)
+  PATCH=$(gp ro.build.version.security_patch)
+  BUILD=$(gp ro.build.display.id)
+  FINGERPRINT=$(gp ro.build.fingerprint ro.vendor.build.fingerprint)
+  REGION=$(gp ro.csc.sales_code ro.product.mod_device ro.miui.region ro.oplus.regionmark ro.vendor.oplus.regionmark ro.product.locale.region)
+  SOC=$(printf '%s %s' "$(gp ro.soc.manufacturer)" "$(gp ro.soc.model)" | sed 's/^ *//; s/ *$//')
+  [ -n "$SOC" ] || SOC=$(gp ro.hardware.chipname ro.board.platform ro.hardware)
+  CARRIER=$(gp gsm.sim.operator.alpha gsm.operator.alpha | tr ',' ' ' | sed 's/ *$//')
+  SERIAL=$(gp ro.serialno ro.boot.serialno)
+  rm -f "$_pf"
+  RAM_MB=$(sh_dev cat /proc/meminfo | sed -n 's/^MemTotal:[[:space:]]*\([0-9]*\) kB/\1/p')
+  [ -z "$RAM_MB" ] || RAM_MB=$((RAM_MB / 1024))
+  STORAGE=$(sh_dev df -h /data 2>/dev/null | awk 'NR==2 {print $2 " totali, " $4 " liberi"}')
+
+  # Un nome confermato dall'utente vince su tutto.
+  _idf=$(identity_file)
+  if [ -f "$_idf" ]; then
+    _conf=$(sed -n 's/^NOME_CONFERMATO=//p' "$_idf" | tail -1)
+    if [ -n "$_conf" ]; then MARKET=$_conf; CONFIDENCE=confermato; SOURCE="confermato dall'utente"; fi
+  fi
+
+  # Una ricerca web che trova questo modello preciso.
+  QUERY="${MARKET:+$MARKET }$MODEL"
+  [ "$FAMILY" != xiaomi ] || [ -z "$DEVICE" ] || QUERY="$QUERY $DEVICE"
+
+  for _k in MAKER BRAND MODEL MARKET CONFIDENCE SOURCE SERIES DEVICE NAME FAMILY SKIN ANDROID SDK \
+            PATCH BUILD FINGERPRINT REGION SOC RAM_MB STORAGE CARRIER SERIAL QUERY; do
+    eval "printf '%s=%s\n' \"\$_k\" \"\$$_k\""
+  done
 }
 
 lost() { echo "Ho perso il collegamento con il telefono mentre leggevo le app. Non ho cambiato niente. Riprova." >&2; exit 2; }

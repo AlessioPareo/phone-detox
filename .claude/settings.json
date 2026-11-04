@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(adb devices:*)",
+      "Bash(adb version)",
+      "Bash(sh identify.sh:*)",
+      "Bash(sh info.sh:*)",
+      "Bash(sh candidates.sh:*)",
+      "Bash(sh check.sh)",
+      "Read(docs/**)"
+    ],
+    "deny": [
+      "Bash(adb shell pm uninstall:*)",
+      "Bash(adb shell pm clear:*)",
+      "Bash(adb shell rm:*)",
+      "Bash(adb root:*)",
+      "Bash(adb remount:*)",
+      "Bash(adb shell su:*)"
+    ]
+  }
+}
